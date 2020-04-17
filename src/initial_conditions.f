@@ -59,6 +59,7 @@ endif
 r = PV_vector(1) ; theta = PV_vector(2) ; phi = PV_vector(3)
 rdot0 = PV_vector(4) ; thetadot0 = PV_vector(5) ; phidot0 = PV_vector(6)
 
+
 !Define some useful quantitites
 sig = r**2.0_dp +(a*cos(theta))**2.0_dp
 del = r**2.0_dp - 2.0_dp*r +a**2
@@ -114,6 +115,8 @@ kappa = ptheta**2.0 + a**2*sin(theta)**2.0 + Lz**2.0/sin(theta)**2.0
 
 
 
+print *,'p=', 1.0, pr,ptheta,Lz
+stop
 !Save to vectors for output
 x(1) = r
 x(2) = theta
@@ -199,6 +202,7 @@ xdot = sin(dir_theta)*cos(dir_phi)
 ydot = sin(dir_theta)*sin(dir_phi)
 zdot = cos(dir_theta)
 
+
 !Convert to BL
 sigma = r**2.0_dp +(a*cos(theta))**2.0_dp
 mm = sqrt(r**2 + a**2)
@@ -215,6 +219,12 @@ thetadot0 = (mm*cos(theta)*cos(phi) * xdot &
 
 
 phidot0 = (-sin(phi)*xdot + cos(phi)*ydot)/(mm*sin(theta))
+
+
+print *, xdot,ydot,zdot
+print *, r,theta,phi
+print *, rdot0,thetadot0,phidot0
+
 
 
 !write for output
