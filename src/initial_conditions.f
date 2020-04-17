@@ -110,13 +110,6 @@ B2 = B2 / Eobs**2
 !One more constant to define
 kappa = ptheta**2.0 + a**2*sin(theta)**2.0 + Lz**2.0/sin(theta)**2.0
 
-
-
-
-
-
-print *,'p=', 1.0, pr,ptheta,Lz
-stop
 !Save to vectors for output
 x(1) = r
 x(2) = theta

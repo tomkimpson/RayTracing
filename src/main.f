@@ -1,6 +1,7 @@
 program main
 
 use parameters
+use constants
 
 implicit none
 real(kind=dp) :: aL, aU, bL ,bU !image plane limits
@@ -8,8 +9,8 @@ real(kind=dp) :: nu0, nu1 !Frequency limits
 real(kind=dp) :: alpha, beta, nu_obs
 integer(kind=dp),parameter :: N = 100
 integer(kind=dp) :: i,j
-
-
+real(kind=dp) :: ds
+real(kind=dp),dimension(4) :: globals
 
 
 !Some housekeeeping
@@ -24,8 +25,76 @@ if (mode .EQ. 'frequency') then
     do i = 0,N
     print *, N-i
     nu_obs = nu0 + (nu1-nu0)/real(N,kind=dp) * real(i,kind=dp)
-    call run(alpha,beta,nu_obs)
+    call run(alpha,beta,nu_obs,ds,1)
     enddo
+
+
+else if (mode .EQ. 'shoot') then
+
+
+    if (IntegrationType .EQ. 'Forwards') then
+    print *, "Error: Cannot do forward integration in shooting mode"
+    stop
+    endif
+
+
+    if (N0 .ne. 0.0_dp) then
+    print *, 'You are no longer ray tracing in vacuum. Check the frequency'
+    stop
+    endif
+
+
+    !Set the target point
+    !Note - will likely just read this in from file in future
+    xTarget = -100.0_dp
+    yTarget = 20.0_dp
+    zTarget = 0.0_dp
+
+    !Initial guess
+    alpha = yTarget !0.01_dp
+    beta = zTarget !0.01_dp
+   
+
+ !   alpha = 32.852577953154018
+ !   beta = -6.6419327569548769E-004
+
+
+
+
+!alpha = 32.898730353507581
+!beta = -7.5923841822186200E-006
+
+
+ 
+  !  if (beta .EQ. 0.0_dp) then
+  !  beta = 0.010_dp
+  !  endif
+
+
+    nu_obs = 100.0_dp !Doesnt matter for vacuum
+    
+    !Setup for optimisation
+    ds = 100.0_dp
+    globals = 0.0_dp
+    
+
+    !Do the first run
+    call run(alpha,beta,nu_obs,ds,1)
+    print *, 'Origin:', alpha,beta,ds
+    !Then optimise to find the minimum
+    do while (ds .GT. ds_eps)
+    !do i=1,10
+    call optimise_alpha_beta(alpha,beta,nu_obs,ds,globals)
+    enddo
+
+
+    call run(alpha,beta,nu_obs,ds,1)
+    
+
+
+    print *, 'completed'
+    print *, ds
+    stop
 
 else if (mode .EQ. 'image') then
 
@@ -42,7 +111,7 @@ else if (mode .EQ. 'image') then
     print *, i
     do j = 0,N
     beta = bL + (bU-bL)/real(N,kind=dp) * real(j,kind=dp)
-    call run(alpha,beta,nu_obs)
+    call run(alpha,beta,nu_obs,ds,1)
 
     enddo
     enddo
@@ -63,7 +132,7 @@ else if (mode .EQ. 'equator') then
     do i = 0,N
     alpha = aL + (aU-aL)/real(N,kind=dp) * real(i,kind=dp)
     beta = 0.0_dp
-    call run(alpha,beta,nu_obs)
+    call run(alpha,beta,nu_obs,ds,1)
     enddo
 
 
@@ -72,7 +141,7 @@ else if (mode .EQ. 'equator') then
 else if (mode .EQ. 'single') then
 
     alpha = -7.0_dp ; beta = 0.0_dp ; nu_obs = 0.210_dp
-    call run(alpha,beta,nu_obs)
+    call run(alpha,beta,nu_obs,ds,1)
 
 
 endif
@@ -82,7 +151,7 @@ end program main
 
 
 
-subroutine run(alpha,beta,nu)
+subroutine run(alpha,beta,nu,ds,plot)
 
 use parameters
 use IC
@@ -96,13 +165,14 @@ implicit none
 
 
 real(kind=dp),intent(in) :: alpha,beta,nu
+real(kind=dp),intent(out) :: ds
+integer(kind=4), intent(in) :: plot !plot overrride. if = 1, always plot
 !Other
 real(kind=dp), dimension(6) :: x 
 real(kind=dp), dimension(4) :: c 
 integer(kind=dp) :: counts
 real(kind=dp), dimension(Nrows, Ncols) :: output !Array to save to. Column major
 integer(kind=dp) :: code
-
 
 !Set the intial conditions
 call initial_conditions(alpha,beta,nu,x,c)
@@ -115,10 +185,28 @@ output(:,counts) = x
 do while (x(1) .GT. Rhor)
 
     call RKF(x,c)
+
+
+    if (counts .GT. Ncols) then
+    print *, 'Error: counts > Ncols', counts, Ncols
+    stop
+    endif
+
+
     counts = counts + 1
     output(:,counts) = x
+ 
     
-    !Exit condition
+
+   
+    !Exit condition. Intersection search
+    if (c(3) .EQ. -1.0_dp) then
+    call calculate_ds(x,ds)
+    code = 2
+    exit
+    endif
+
+    !Exit condition. !General ray tracing
     if (x(1) .GT. r_obs .and. x(5) .GT. 0.0_dp) then
     code = 1
     Exit
@@ -129,8 +217,9 @@ enddo
 
 
 !I/O
+if (plot .eq. 1) then
 call ToFile(output,counts,alpha,beta,nu,c(1))
-
+endif
 
 
 
@@ -140,8 +229,146 @@ end subroutine run
 
 
 
+subroutine optimise_alpha_beta(alpha,beta,nu_obs,ds,globals)
+
+use parameters
+use constants
+
+implicit none
+
+!Arguments
+real(kind=dp), intent(inout) :: alpha,beta,ds
+real(kind=dp),intent(in) :: nu_obs
+real(kind=dp), intent(inout),dimension(4) :: globals
+
+!Other
+real(kind=dp) :: ds_alpha, ds_beta
+real(kind=dp) :: gA, gB
+real(kind=dp) :: zeta,hA,hB
+real(kind=dp) :: eta, t, ds_trial
+real(kind=dp) :: ds1, alpha1, beta1
 
 
+
+
+!print *, 'in = ', alpha,beta,ds
+
+
+!Get the gradients in the alpha/beta directions
+
+!Gradient alpha
+call run(alpha+dg,beta,nu_obs,ds_alpha,0)
+gA = - ((ds_alpha - ds)/dg)
+
+!Gradient beta
+call run(alpha,beta+dg,nu_obs,ds_beta,0)
+gB = - ((ds_beta - ds)/dg)
+
+
+
+
+!stop
+!Get descent direction
+
+if (globals(1) .EQ. 0.0_dp) then
+!First go
+zeta = 0.0_dp
+else
+zeta = (gA*gA +gB*gB)/(globals(1)**2 + globals(2)**2)
+endif
+
+hA = gA +zeta*globals(3)
+hB = gB +zeta*globals(4)
+
+
+
+!Got the direction, now get the stepsizze by performing a line search
+eta = 0.50_dp
+t = 1
+ds1 = 1e20
+
+do 
+    call run(alpha+t*hA,beta+t*hB,nu_obs,ds_trial,0)
+
+
+    print *, alpha+t*hA,beta+t*hB,ds_trial,t   
+
+
+    if (ds_trial .LT. ds1) then
+
+    !Update the best values
+    alpha1 = alpha+t*hA
+    beta1 = beta+t*hB
+    ds1 = ds_trial
+
+
+
+    else
+    !Has stopped improving.
+    !Use this stepsize going forwards
+    exit
+    endif
+
+    t = t*eta
+
+
+
+enddo
+
+
+
+
+!Update before exiting subroutine 
+
+if (ds1 .LT. ds) then
+globals(1) = gA ; globals(2) = gB ; globals(3) = hA ; globals(4) = hB
+alpha = alpha1 ; beta = beta1 ; ds = ds1
+
+else
+!Reset, gives it a kick
+globals = 0.0_dp
+
+
+endif
+
+
+
+print *, 'out = ', alpha,beta,ds
+
+!stop
+
+end subroutine optimise_alpha_beta
+
+
+
+subroutine calculate_ds(v,ds)
+
+use parameters
+use constants
+
+implicit none
+
+real(kind=dp), dimension(6) :: v !input vector
+real(kind=dp) :: ds,x,y,z,r,theta,phi,m
+
+!Load data
+r = v(1) ; theta = v(2) ; phi = v(3)
+m = sqrt(r**2 + a2)
+
+!Convert to cartesian
+x = m*sin(theta)*cos(phi)
+y = m*sin(theta)*sin(phi)
+z = r*cos(theta)
+
+
+
+!Calcuale the square of the difference
+ds = (x - xTarget)**2 + (y - yTarget)**2 + (z-zTarget)**2
+
+
+
+
+end subroutine calculate_ds
 
 
 

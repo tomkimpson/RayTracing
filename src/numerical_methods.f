@@ -29,6 +29,17 @@ real(kind=dp), dimension(size(y)) :: ynew, yerr
 real(kind=dp), dimension(size(y)) :: deltaErr, yscal, ratio
 real(kind=dp) :: errmax, h
 
+!Some reals used for intersection search
+
+!The x cooordinate at this timestep
+real(kind=dp) :: x
+! the difference between the x coodinate and the xtarget
+real(kind=dp) :: dx
+!shows we are now iterating close to intersection points
+integer(kind=dp) :: intersecting
+
+
+intersecting = 0
 
 
 11 continue
@@ -79,30 +90,96 @@ k6 = h * dy6
 ynew = y1 + c1*k1  + c3*k3 + c4*k4  +c6*k6 
 yerr = y1 + cbar1*k1 + cbar3*k3 + cbar4*k4 + cbar5*k5 + cbar6*k6
 
-
-
-!print *, ynew(1), y1(1),  c1*k1(1)  + c3*k3(1) + c4*k4(1)  +c6*k6(1), h
-
-
-
 deltaErr = abs(ynew - yerr)
 yscal = abs(y1) + abs(k1) + 1.0d-3
 ratio = deltaErr/yscal
 errmax = escal * maxval(ratio)
 
 
-if (errmax .GT. 1.0_dp) then
-!This is not good. Do not update yOUT and reduce the stepsize
-call ShrinkStepsize(errmax,h)
-c(3) = h
-goto 11
-else
-!This is good. Update yOUT and try to increase the stepsize a little bit
-call GrowStepsize(errmax,h)
-c(3) = h
-y = ynew
+
+
+!Some conditions that are only used in shooting mode
+
+
+
+
+if (mode .EQ. 'shoot') then
+
+
+
+    !Search for overstep c.f. target point
+    !This is currently specialised to the observer in the equatoiral plane.
+    x = sqrt(ynew(1)**2 + a2) * sin(ynew(2))*cos(ynew(3))
+    dx = x - xTarget
+
+    
+    if (y(1) .eq. ynew(1)) then
+    !stepsize is so small that variables are no longer updating    
+    !Take what youve got and exit
+    y = ynew
+    c(3) = -1.0_dp !Signifies to outer routine to quit
+    return
+    endif
+
+
+
+    if (abs(dx) .LT. 1e-15) then
+    y = ynew
+    c(3) = -1.0_dp !Signifies to outer routine to quit
+    return
+    endif
+
+
+    if (abs(dx) .LT. dx_eps) then
+    !Update and exit
+    y = ynew
+    c(3) = -1.0_dp !Signifies to outer routine to quit
+    return
+    endif
+
+    if (dx .LT. 0.0_dp) then
+    !Overstepped
+    !Step again with smaller h
+    !set intersecting = 1 to signify to the rest of the program that we are near the intersection point
+    !This switches us to a fixed stepsize which is only updated below
+    intersecting = 1
+    c(3) = c(3) / 2.0_dp
+    goto 11
+    endif
+
+
+
 endif
 
+
+
+
+
+
+if (intersecting .EQ. 0) then
+
+!Just update adaptively as usual
+
+    if (errmax .GT. 1.0_dp) then
+    !This is not good. Do not update yOUT and reduce the stepsize
+    call ShrinkStepsize(errmax,h)
+    c(3) = h
+    goto 11
+    else
+    !This is good. Update yOUT and try to increase the stepsize a little bit
+    call GrowStepsize(errmax,h)
+    c(3) = h
+    y = ynew
+    endif
+
+
+else 
+!switch to a fixed stepsize
+    
+    y = ynew
+    c(3) = h
+    goto 11
+endif
 
 
 

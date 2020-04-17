@@ -25,6 +25,20 @@ real(kind=dp), parameter :: Rhor = 1.0_dp + sqrt(1.0_dp - a**2) + 1.0d-2 !Horizo
 real(kind=dp), parameter :: a2 = a**2
 
 
+!Target points for intersection search
+real(kind=dp) :: xTarget, yTarget, zTarget
+
+!Set the 'x precision' for intersection search
+real(kind=dp),parameter :: dx_eps = epsilon(Rhor)
+
+!Set the target intersection precision
+real(kind=dp), parameter :: ds_eps = (1.0e-6)**2
+
+!Set the gradient bit
+real(kind=dp), parameter :: dg = 1.0e-6 !1e9*epsilon(Rhor)
+
+
+
 !Integration constants
 real(kind=dp) :: escal !This will be made higher / lower for double vs quad precision
 real(kind=dp), parameter :: S = 0.90_dp
