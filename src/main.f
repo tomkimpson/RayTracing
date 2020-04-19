@@ -46,14 +46,20 @@ else if (mode .EQ. 'shoot') then
 
     !Set the target point
     !Note - will likely just read this in from file in future
-    xTarget = -100.0_dp
-    yTarget = 20.0_dp
+    xTarget = -150.0_dp
+    yTarget = 60.0_dp
     zTarget = 0.0_dp
 
+    rTarget = sqrt(xTarget**2 + yTarget**2 + zTarget**2 -a2)
+
+
     !Initial guess
-    alpha = yTarget !0.01_dp
+    alpha = -30.0_dp !yTarget !0.01_dp
     beta = zTarget !0.01_dp
    
+!    alpha = -12.590_dp
+!    beta = -4.90e-3
+
 
  !   alpha = 32.852577953154018
  !   beta = -6.6419327569548769E-004
@@ -201,8 +207,12 @@ do while (x(1) .GT. Rhor)
    
     !Exit condition. Intersection search
     if (c(3) .EQ. -1.0_dp) then
+ 
+    print *, rTarget, x(1:3)    
+
     call calculate_ds(x,ds)
     code = 2
+
     exit
     endif
 
@@ -256,9 +266,18 @@ real(kind=dp) :: ds1, alpha1, beta1
 
 !Get the gradients in the alpha/beta directions
 
+
+print *, 'GRADIENTS-----'
+
+
 !Gradient alpha
 call run(alpha+dg,beta,nu_obs,ds_alpha,0)
 gA = - ((ds_alpha - ds)/dg)
+
+
+print *, 'ds=',ds_alpha, ds, ds_alpha-ds
+print *, 'gA = ', gA
+stop
 
 !Gradient beta
 call run(alpha,beta+dg,nu_obs,ds_beta,0)
@@ -283,17 +302,24 @@ hB = gB +zeta*globals(4)
 
 
 !Got the direction, now get the stepsizze by performing a line search
-eta = 0.50_dp
-t = 1
+eta = 2.0_dp !0.50_dp
+t = 1.0_dp
+!t = 1e-5
+
+t = 1e-5
+
+t = 5e-9
+
 ds1 = 1e20
+
 
 do 
     call run(alpha+t*hA,beta+t*hB,nu_obs,ds_trial,0)
 
 
-    print *, alpha+t*hA,beta+t*hB,ds_trial,t   
-
-
+    print *, alpha+t*hA,beta+t*hB,ds_trial,t
+    print *, 'ga=',gA
+    stop
     if (ds_trial .LT. ds1) then
 
     !Update the best values
@@ -303,13 +329,26 @@ do
 
 
 
-    else
+    !else
     !Has stopped improving.
     !Use this stepsize going forwards
+ !   continue
+    !exit
+    endif
+
+    !t = t/eta
+    t = t*eta
+
+    if (t .GT. 1.0_dp) then
+
     exit
     endif
 
-    t = t*eta
+
+
+    if (t .lt. 1e-20) then
+    stop
+    endif
 
 
 
@@ -323,12 +362,17 @@ enddo
 if (ds1 .LT. ds) then
 globals(1) = gA ; globals(2) = gB ; globals(3) = hA ; globals(4) = hB
 alpha = alpha1 ; beta = beta1 ; ds = ds1
-
+global_t = t
 else
 !Reset, gives it a kick
+print *, 'Failure- needs reset'
+
+
+print *, 'Gradients', gA, gB
+print *, 'attempt = ', alpha,t*hA
 globals = 0.0_dp
-
-
+!stop
+!global_t = 1e-3 !1.0_dp !global_t/10.0_dp
 endif
 
 
@@ -365,7 +409,7 @@ z = r*cos(theta)
 !Calcuale the square of the difference
 ds = (x - xTarget)**2 + (y - yTarget)**2 + (z-zTarget)**2
 
-
+!ds = phi - atan2(yTarget, xTarget)
 
 
 end subroutine calculate_ds

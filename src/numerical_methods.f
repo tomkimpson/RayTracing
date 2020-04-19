@@ -34,7 +34,7 @@ real(kind=dp) :: errmax, h
 !The x cooordinate at this timestep
 real(kind=dp) :: x
 ! the difference between the x coodinate and the xtarget
-real(kind=dp) :: dx
+real(kind=dp) :: dx, dr
 !shows we are now iterating close to intersection points
 integer(kind=dp) :: intersecting
 
@@ -98,6 +98,18 @@ errmax = escal * maxval(ratio)
 
 
 
+
+!Select if good step first?
+!Select if good step first?
+!Select if good step first?
+!Select if good step first?
+!Select if good step first?
+!Select if good step first?
+
+
+
+
+
 !Some conditions that are only used in shooting mode
 
 
@@ -108,42 +120,63 @@ if (mode .EQ. 'shoot') then
 
 
     !Search for overstep c.f. target point
-    !This is currently specialised to the observer in the equatoiral plane.
-    x = sqrt(ynew(1)**2 + a2) * sin(ynew(2))*cos(ynew(3))
-    dx = x - xTarget
+ 
+   !This is currently specialised to the observer in the equatoiral plane.
 
-    
+!    x = sqrt(ynew(1)**2 + a2) * sin(ynew(2))*cos(ynew(3))
+!    dx = x - xTarget
+ 
+
+    dx = ynew(1) - rTarget
+       
+
+ !   print *, dx, ynew(1),intersecting, h
+
+
     if (y(1) .eq. ynew(1)) then
     !stepsize is so small that variables are no longer updating    
     !Take what youve got and exit
     y = ynew
     c(3) = -1.0_dp !Signifies to outer routine to quit
+ 
+    print *, '-------------------'
+    print *, y1
+    print *, c1*k1  + c3*k3 + c4*k4  +c6*k6 
+    print *, ynew
+
+    print *, 'jere '
+    stop
     return
     endif
 
 
 
-    if (abs(dx) .LT. 1e-15) then
-    y = ynew
-    c(3) = -1.0_dp !Signifies to outer routine to quit
-    return
-    endif
+!    if (abs(dx) .LT. 1e-13) then
+!    y = ynew
+!    c(3) = -1.0_dp !Signifies to outer routine to quit
+    
+!    return
+!    endif
 
 
     if (abs(dx) .LT. dx_eps) then
     !Update and exit
     y = ynew
     c(3) = -1.0_dp !Signifies to outer routine to quit
+  
+    print *, 'exiting'
+
     return
     endif
 
-    if (dx .LT. 0.0_dp) then
+    if (dx .GT. 0.0_dp .and. k1(1) .GT. 0.0_dp) then
     !Overstepped
     !Step again with smaller h
     !set intersecting = 1 to signify to the rest of the program that we are near the intersection point
     !This switches us to a fixed stepsize which is only updated below
+ !   print *, 'overshoot'
     intersecting = 1
-    c(3) = c(3) / 2.0_dp
+    c(3) = c(3) / 1.10_dp
     goto 11
     endif
 

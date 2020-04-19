@@ -35,7 +35,13 @@ real(kind=dp),parameter :: dx_eps = epsilon(Rhor)
 real(kind=dp), parameter :: ds_eps = (1.0e-6)**2
 
 !Set the gradient bit
-real(kind=dp), parameter :: dg = 1.0e-6 !1e9*epsilon(Rhor)
+real(kind=dp), parameter :: dg = 1.0e-12 !1e9*epsilon(Rhor)
+
+
+
+!Temporay
+real(kind=dp) :: global_t = 1e-5
+real(kind=dp) :: rTarget
 
 
 

@@ -90,7 +90,7 @@ for f in files:
 
 
 #The target point
-ax1.scatter(-100,20,c='C5')
+ax1.scatter(-150,60,c='C5')
 
 
 plt.rc('text', usetex=True)
