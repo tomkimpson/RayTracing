@@ -97,19 +97,6 @@ errmax = escal * maxval(ratio)
 
 
 
-
-
-!Select if good step first?
-!Select if good step first?
-!Select if good step first?
-!Select if good step first?
-!Select if good step first?
-!Select if good step first?
-
-
-
-
-
 !Some conditions that are only used in shooting mode
 
 
@@ -128,8 +115,7 @@ if (mode .EQ. 'shoot') then
  
 
     dx = ynew(1) - rTarget
-       
-
+ !   print *,ynew(1),rTarget, dx, intersecting, c1*k1(1)  + c3*k3(1) + c4*k4(1)  +c6*k6(1), ynew(3)/PI 
  !   print *, dx, ynew(1),intersecting, h
 
 
@@ -137,7 +123,7 @@ if (mode .EQ. 'shoot') then
     !stepsize is so small that variables are no longer updating    
     !Take what youve got and exit
     y = ynew
-    c(3) = -1.0_dp !Signifies to outer routine to quit
+    c(3) = -2.0_dp !Signifies to outer routine to quit
  
     print *, '-------------------'
     print *, y1
@@ -145,7 +131,10 @@ if (mode .EQ. 'shoot') then
     print *, ynew
 
     print *, 'jere '
-    stop
+    
+
+    
+    !stop
     return
     endif
 
@@ -164,7 +153,7 @@ if (mode .EQ. 'shoot') then
     y = ynew
     c(3) = -1.0_dp !Signifies to outer routine to quit
   
-    print *, 'exiting'
+    !print *, 'exiting'
 
     return
     endif
@@ -208,7 +197,7 @@ if (intersecting .EQ. 0) then
 
 else 
 !switch to a fixed stepsize
-    
+  
     y = ynew
     c(3) = h
     goto 11

@@ -5,7 +5,7 @@ use parameters
 implicit none
 
 private
-public ToFile
+public ToFile, ToFile_optimisation
 
 contains
 
@@ -52,6 +52,37 @@ close(10)
 
 
 end subroutine ToFile
+
+
+
+
+subroutine ToFile_optimisation(array)
+
+real(kind=dp),intent(in),dimension(1000,2) :: array
+character(len=200) :: Fname, ID
+integer(kind=dp) :: i
+
+
+
+
+
+ID = 'optimisation.txt'
+Fname = trim(adjustl(IOpath)) // trim(adjustl(ID))
+
+!Write
+open(unit=10, file = Fname, status = 'replace',form = 'formatted')
+
+do i=1,1000
+
+
+write(10,*) array(i,1), array(i,2)
+
+enddo
+
+
+
+
+end subroutine ToFile_optimisation
 
 
 

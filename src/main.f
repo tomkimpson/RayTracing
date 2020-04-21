@@ -2,16 +2,19 @@ program main
 
 use parameters
 use constants
+use IO
 
 implicit none
 real(kind=dp) :: aL, aU, bL ,bU !image plane limits
 real(kind=dp) :: nu0, nu1 !Frequency limits
 real(kind=dp) :: alpha, beta, nu_obs
-integer(kind=dp),parameter :: N = 100
+integer(kind=dp),parameter :: N = 1000
 integer(kind=dp) :: i,j
 real(kind=dp) :: ds
 real(kind=dp),dimension(4) :: globals
 
+!Array to store optimisation info
+real(kind=dp), dimension(N,2) :: optim
 
 !Some housekeeeping
 call setup()
@@ -46,50 +49,32 @@ else if (mode .EQ. 'shoot') then
 
     !Set the target point
     !Note - will likely just read this in from file in future
-    xTarget = -150.0_dp
-    yTarget = 60.0_dp
-    zTarget = 0.0_dp
-
-    rTarget = sqrt(xTarget**2 + yTarget**2 + zTarget**2 -a2)
-
+    
+    rTarget = 160.0_dp ; thetaTarget = PI/2.0_dp ; phiTarget = 2.760_dp
+    
+    xTarget = sqrt(rTarget**2 + a2) * sin(thetaTarget) * cos(phiTarget)
+    yTarget = sqrt(rTarget**2 + a2) * sin(thetaTarget) * sin(phiTarget)
+    zTarget = rTarget * cos(thetaTarget)
+    
 
     !Initial guess
     alpha = -30.0_dp !yTarget !0.01_dp
     beta = zTarget !0.01_dp
    
-!    alpha = -12.590_dp
-!    beta = -4.90e-3
-
-
- !   alpha = 32.852577953154018
- !   beta = -6.6419327569548769E-004
-
-
-
-
-!alpha = 32.898730353507581
-!beta = -7.5923841822186200E-006
-
-
- 
-  !  if (beta .EQ. 0.0_dp) then
-  !  beta = 0.010_dp
-  !  endif
-
-
+    !Set the ray frequency
     nu_obs = 100.0_dp !Doesnt matter for vacuum
     
     !Setup for optimisation
     ds = 100.0_dp
     globals = 0.0_dp
     
-
     !Do the first run
     call run(alpha,beta,nu_obs,ds,1)
     print *, 'Origin:', alpha,beta,ds
-    !Then optimise to find the minimum
-    do while (ds .GT. ds_eps)
-    !do i=1,10
+
+   !Then optimise to find the minimum
+    !do while (ds .GT. ds_eps)
+    do i=1,20
     call optimise_alpha_beta(alpha,beta,nu_obs,ds,globals)
     enddo
 
@@ -100,7 +85,7 @@ else if (mode .EQ. 'shoot') then
 
     print *, 'completed'
     print *, ds
-    stop
+!    stop
 
 else if (mode .EQ. 'image') then
 
@@ -206,11 +191,11 @@ do while (x(1) .GT. Rhor)
 
    
     !Exit condition. Intersection search
-    if (c(3) .EQ. -1.0_dp) then
+    if (c(3) .LT. 0.0_dp) then
  
-    print *, rTarget, x(1:3)    
-
     call calculate_ds(x,ds)
+
+
     code = 2
 
     exit
@@ -257,37 +242,20 @@ real(kind=dp) :: gA, gB
 real(kind=dp) :: zeta,hA,hB
 real(kind=dp) :: eta, t, ds_trial
 real(kind=dp) :: ds1, alpha1, beta1
-
-
-
-
-!print *, 'in = ', alpha,beta,ds
+real(kind=dp) :: trial_alpha, trial_beta
 
 
 !Get the gradients in the alpha/beta directions
-
-
-print *, 'GRADIENTS-----'
-
 
 !Gradient alpha
 call run(alpha+dg,beta,nu_obs,ds_alpha,0)
 gA = - ((ds_alpha - ds)/dg)
 
 
-print *, 'ds=',ds_alpha, ds, ds_alpha-ds
-print *, 'gA = ', gA
-stop
-
 !Gradient beta
 call run(alpha,beta+dg,nu_obs,ds_beta,0)
 gB = - ((ds_beta - ds)/dg)
 
-
-
-
-!stop
-!Get descent direction
 
 if (globals(1) .EQ. 0.0_dp) then
 !First go
@@ -300,55 +268,60 @@ hA = gA +zeta*globals(3)
 hB = gB +zeta*globals(4)
 
 
+!Normalise the direction. Just tells you higher or lower info now
+hB = gB / abs(gA)
+hA = gA / abs(gA)
+
+
+
 
 !Got the direction, now get the stepsizze by performing a line search
 eta = 2.0_dp !0.50_dp
-t = 1.0_dp
-!t = 1e-5
-
-t = 1e-5
-
-t = 5e-9
-
+t = global_t !5e-9
 ds1 = 1e20
 
 
-do 
-    call run(alpha+t*hA,beta+t*hB,nu_obs,ds_trial,0)
+11 do 
 
+    !Trial values
+    trial_alpha = alpha + t*hA
+    trial_beta = beta + t*hB
 
-    print *, alpha+t*hA,beta+t*hB,ds_trial,t
-    print *, 'ga=',gA
-    stop
-    if (ds_trial .LT. ds1) then
+    !Try a step in the direction
+    call run(trial_alpha,trial_beta,nu_obs,ds_trial,0)
+
+    print *, 'Tr:', trial_alpha,ds_trial,t
+
+    if (ds_trial .LT. ds) then
 
     !Update the best values
     alpha1 = alpha+t*hA
     beta1 = beta+t*hB
     ds1 = ds_trial
+    global_t = t 
 
 
-
-    !else
-    !Has stopped improving.
-    !Use this stepsize going forwards
- !   continue
-    !exit
-    endif
-
-    !t = t/eta
-    t = t*eta
-
-    if (t .GT. 1.0_dp) then
 
     exit
+
+
+    else
+    !Has stopped improving.
+    !Use this stepsize going forwards
+    
+    !exit
+    if (t .LT. 1e-7) then
+    print *, 'no iszeable change', ds1,ds
+    exit    
+    endif
+
+
+    t = t/eta
+    goto 11
     endif
 
 
 
-    if (t .lt. 1e-20) then
-    stop
-    endif
 
 
 
@@ -362,12 +335,10 @@ enddo
 if (ds1 .LT. ds) then
 globals(1) = gA ; globals(2) = gB ; globals(3) = hA ; globals(4) = hB
 alpha = alpha1 ; beta = beta1 ; ds = ds1
-global_t = t
+
 else
 !Reset, gives it a kick
 print *, 'Failure- needs reset'
-
-
 print *, 'Gradients', gA, gB
 print *, 'attempt = ', alpha,t*hA
 globals = 0.0_dp
@@ -377,8 +348,8 @@ endif
 
 
 
-print *, 'out = ', alpha,beta,ds
-
+!print *, 'out = ', alpha,beta,ds
+print *, '---------------------'
 !stop
 
 end subroutine optimise_alpha_beta
@@ -396,7 +367,7 @@ real(kind=dp), dimension(6) :: v !input vector
 real(kind=dp) :: ds,x,y,z,r,theta,phi,m
 
 !Load data
-r = v(1) ; theta = v(2) ; phi = v(3)
+r = v(1) ; theta = v(2) ; phi = v(3) + 2.0_dp * PI
 m = sqrt(r**2 + a2)
 
 !Convert to cartesian
@@ -407,9 +378,16 @@ z = r*cos(theta)
 
 
 !Calcuale the square of the difference
+
+
 ds = (x - xTarget)**2 + (y - yTarget)**2 + (z-zTarget)**2
 
-!ds = phi - atan2(yTarget, xTarget)
+
+print *, 'cartesian norm:', (x - xTarget)**2 + (y - yTarget)**2 + (z-zTarget)**2
+
+
+!ds = (r - rTarget)**2 + (theta - thetaTarget)**2 + (phi-phiTarget)**2
+
 
 
 end subroutine calculate_ds
@@ -423,8 +401,12 @@ use constants
 
 if (dp .EQ. 8) then
 escal = 1.0e15
+dg = 1e-5
+ds_eps = 1e-1
 else if (dp .EQ. 16) then
 escal = 1.0e19
+dg = 1.0e-14 !Numerical gradient
+ds_eps = (1.0e-6)**2
 endif
 
 end subroutine setup

@@ -27,21 +27,21 @@ real(kind=dp), parameter :: a2 = a**2
 
 !Target points for intersection search
 real(kind=dp) :: xTarget, yTarget, zTarget
+real(kind=dp) :: rTarget,thetaTarget, phiTarget
 
 !Set the 'x precision' for intersection search
 real(kind=dp),parameter :: dx_eps = epsilon(Rhor)
 
 !Set the target intersection precision
-real(kind=dp), parameter :: ds_eps = (1.0e-6)**2
+real(kind=dp) :: ds_eps 
 
 !Set the gradient bit
-real(kind=dp), parameter :: dg = 1.0e-12 !1e9*epsilon(Rhor)
+real(kind=dp) :: dg 
 
 
 
 !Temporay
-real(kind=dp) :: global_t = 1e-5
-real(kind=dp) :: rTarget
+real(kind=dp) :: global_t = 10.0_dp
 
 
 
