@@ -40,7 +40,7 @@ integer(kind=dp) :: intersecting
 
 
 !Define a logical condition used when finding ds
-logical :: ds_condition
+logical :: overshoot_condition
 
 intersecting = 0
 
@@ -112,77 +112,51 @@ errmax = escal * maxval(ratio)
 
 if (mode .EQ. 'shoot') then
     !Search for overstep c.f. target point
- 
-!   x = sqrt(ynew(1)**2 + a2) * sin(ynew(2))*cos(ynew(3))
-!    dx = x - xTarget
- 
-
     dx = ynew(1) - rTarget
- !   print *,ynew(1),rTarget, dx, intersecting, c1*k1(1)  + c3*k3(1) + c4*k4(1)  +c6*k6(1), ynew(3)/PI 
- !   print *, dx, ynew(1),intersecting, h
 
 
     if (y(1) .eq. ynew(1)) then
     !stepsize is so small that variables are no longer updating    
-    !Take what youve got and exit
+
+    !This happens when the ray never reaches rTarget
+    
+    !e.g. if rTarget is = 160, but the ray doesnt pass that contour
+
+    !In that case we set the new r to be super large so the optimiser knows this is a bad step
+    
     y = ynew
     c(3) = -2.0_dp !Signifies to outer routine to quit
- 
-    print *, '-------------------'
-    print *, y1
-    print *, c1*k1  + c3*k3 + c4*k4  +c6*k6 
-    print *, ynew
-
-    print *, 'jere '
-    print *, 'Gone wrong - you have reached a float limit'
-
-    
     y(1) = 1e10    
-   ! stop
+    
+    !and exit
     return
     endif
 
-
-
-!    if (abs(dx) .LT. 1e-13) then
-!    y = ynew
-!    c(3) = -1.0_dp !Signifies to outer routine to quit
     
-!    return
-!    endif
-
-
+    
     if (abs(dx) .LT. dx_eps) then
+    !We have got close enough to the target point
     !Update and exit
     y = ynew
     c(3) = -1.0_dp !Signifies to outer routine to quit
-  
-    !print *, 'exiting'
-
     return
     endif
 
 
-
-
-
+    !Define the overshoot condition
     if (xTarget .LT. 0.0_dp) then
-        ds_condition = (dx .GT. 0.0_dp .and. k1(1) .GT. 0.0_dp)
+        overshoot_condition = (dx .GT. 0.0_dp .and. k1(1) .GT. 0.0_dp)
     else
-        ds_condition = (dx .LT. 0.0_dp .and. k1(1) .LT. 0.0_dp)
+        overshoot_condition = (dx .LT. 0.0_dp .and. k1(1) .LT. 0.0_dp)
     endif
 
 
 
-
-
-    !if (dx .GT. 0.0_dp .and. k1(1) .GT. 0.0_dp) then
-    if (ds_condition) then
+    if (overshoot_condition) then
     !Overstepped
     !Step again with smaller h
     !set intersecting = 1 to signify to the rest of the program that we are near the intersection point
     !This switches us to a fixed stepsize which is only updated below
- !   print *, 'overshoot'
     intersecting = 1
     c(3) = c(3) / 1.10_dp
     goto 11
@@ -248,6 +222,7 @@ htemp = S*h*errmax**Pshrink
 h = sign(max(abs(htemp),0.10_dp*abs(h)),h)
 
 end subroutine ShrinkStepsize
+
 
 
 
