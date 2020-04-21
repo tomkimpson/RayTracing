@@ -28,6 +28,7 @@ elif  (d == 2):
 
 #Load data
 path = '/Users/tomkimpson/Data/ThesisData/RT/'
+#path = '/Users/tomkimpson/Data/ThesisData/RT/grav_lensing_example/'
 files = glob.glob(path + '*.txt')
 
 
@@ -67,6 +68,7 @@ def plot(f):
 
     #Plot it
 
+    ax1.scatter(x[-1],y[-1],c='0.1', marker = 'X')
 
     if (d == 3):
         ax1.plot(x,y,z)
@@ -90,12 +92,20 @@ for f in files:
 
 
 #The target point
-ax1.scatter(-150,60,c='C5')
+#ax1.scatter(-150,60,c='C4', marker = 'X')
 
 
 plt.rc('text', usetex=True)
 plt.rc('font', family='serif')
 fs = 20
+
+
+
+
+fname = 'grav_lensing.png'
+savefile = '/Users/tomkimpson/Data/ThesisData/'+fname
+dpi = 100
+#plt.savefig(savefile,dpi=dpi,bbox='tight')
 
 
 plt.show()

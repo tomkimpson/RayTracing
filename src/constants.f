@@ -38,6 +38,9 @@ real(kind=dp) :: ds_eps
 !Set the gradient bit
 real(kind=dp) :: dg 
 
+!Used in pattern search
+real(kind=dp) :: decay_factor
+
 
 
 !Temporay

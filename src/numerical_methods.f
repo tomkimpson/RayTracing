@@ -39,8 +39,16 @@ real(kind=dp) :: dx, dr
 integer(kind=dp) :: intersecting
 
 
+!Define a logical condition used when finding ds
+logical :: ds_condition
+
 intersecting = 0
 
+
+
+
+!print *, ds_condition
+!stop
 
 11 continue
 
@@ -103,14 +111,9 @@ errmax = escal * maxval(ratio)
 
 
 if (mode .EQ. 'shoot') then
-
-
-
     !Search for overstep c.f. target point
  
-   !This is currently specialised to the observer in the equatoiral plane.
-
-!    x = sqrt(ynew(1)**2 + a2) * sin(ynew(2))*cos(ynew(3))
+!   x = sqrt(ynew(1)**2 + a2) * sin(ynew(2))*cos(ynew(3))
 !    dx = x - xTarget
  
 
@@ -131,10 +134,11 @@ if (mode .EQ. 'shoot') then
     print *, ynew
 
     print *, 'jere '
-    
+    print *, 'Gone wrong - you have reached a float limit'
 
     
-    !stop
+    y(1) = 1e10    
+   ! stop
     return
     endif
 
@@ -158,7 +162,22 @@ if (mode .EQ. 'shoot') then
     return
     endif
 
-    if (dx .GT. 0.0_dp .and. k1(1) .GT. 0.0_dp) then
+
+
+
+
+    if (xTarget .LT. 0.0_dp) then
+        ds_condition = (dx .GT. 0.0_dp .and. k1(1) .GT. 0.0_dp)
+    else
+        ds_condition = (dx .LT. 0.0_dp .and. k1(1) .LT. 0.0_dp)
+    endif
+
+
+
+
+
+    !if (dx .GT. 0.0_dp .and. k1(1) .GT. 0.0_dp) then
+    if (ds_condition) then
     !Overstepped
     !Step again with smaller h
     !set intersecting = 1 to signify to the rest of the program that we are near the intersection point

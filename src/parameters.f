@@ -34,7 +34,7 @@ character(len=20), parameter :: mode = 'shoot' ! 'frequency', 'image', 'equator'
 !Parameters used if forward ray tracing
 real(kind=dp), parameter :: r_init = 800.0_dp , theta_init = PI/2.0_dp, phi_init = 0.0_dp
 real(kind=dp), parameter :: dir_theta = PI/4.0_dp , dir_phi = 0.0_dp !0.0_dp
-
+integer(kind=dp), parameter :: secondary_rays = 1 !Turn on/off search for seconary rays
 
 
 !IO parameters

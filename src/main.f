@@ -10,8 +10,8 @@ real(kind=dp) :: nu0, nu1 !Frequency limits
 real(kind=dp) :: alpha, beta, nu_obs
 integer(kind=dp),parameter :: N = 1000
 integer(kind=dp) :: i,j
+!real(kind=dp),dimension(4) :: globals
 real(kind=dp) :: ds
-real(kind=dp),dimension(4) :: globals
 
 !Array to store optimisation info
 real(kind=dp), dimension(N,2) :: optim
@@ -19,8 +19,8 @@ real(kind=dp), dimension(N,2) :: optim
 !Some housekeeeping
 call setup()
 
-
-
+!Runs the program
+!call set_mode_and_run()
 
 if (mode .EQ. 'frequency') then
     alpha = -7.0_dp; beta = 0.0_dp !Only used if integration mode = backwards
@@ -47,46 +47,25 @@ else if (mode .EQ. 'shoot') then
     endif
 
 
+
+    rTarget = 160.0_dp ; thetaTarget = PI/2.0_dp ; phiTarget = 1.60_dp ! 1.70_dp !PI/2.0_dp + 0.1 !2.760_dp
+    do i = 1,20
+
+    phiTarget = phiTarget + 0.010_dp*real(i,kind=dp)
+    print *,phiTarget/PI   
+
+
+    call find_intersecting_rays()
+
+    enddo
+
     !Set the target point
     !Note - will likely just read this in from file in future
     
+    stop
     rTarget = 160.0_dp ; thetaTarget = PI/2.0_dp ; phiTarget = 2.760_dp
-    
-    xTarget = sqrt(rTarget**2 + a2) * sin(thetaTarget) * cos(phiTarget)
-    yTarget = sqrt(rTarget**2 + a2) * sin(thetaTarget) * sin(phiTarget)
-    zTarget = rTarget * cos(thetaTarget)
-    
+    call find_intersecting_rays()
 
-    !Initial guess
-    alpha = -30.0_dp !yTarget !0.01_dp
-    beta = zTarget !0.01_dp
-   
-    !Set the ray frequency
-    nu_obs = 100.0_dp !Doesnt matter for vacuum
-    
-    !Setup for optimisation
-    ds = 100.0_dp
-    globals = 0.0_dp
-    
-    !Do the first run
-    call run(alpha,beta,nu_obs,ds,1)
-    print *, 'Origin:', alpha,beta,ds
-
-   !Then optimise to find the minimum
- !   do while (ds .GT. ds_eps)
-    do i=1,70
-    !call optimise_alpha_beta(alpha,beta,nu_obs,ds,globals)
-    call pattern_search(alpha,beta,nu_obs,ds,globals)
-    enddo
-
-
-    call run(alpha,beta,nu_obs,ds,1)
-    
-
-
-    print *, 'completed'
-    print *, ds
-!    stop
 
 else if (mode .EQ. 'image') then
 
@@ -143,6 +122,98 @@ end program main
 
 
 
+
+
+
+subroutine find_intersecting_rays()
+
+use parameters
+use constants
+implicit none
+
+!Imsge plane coords
+real(kind=dp) :: alpha,beta
+!f(alpha,beta) = ds
+real(kind=dp) :: ds
+!Frequency - doesnt matter here but needs to be set
+real(kind=dp) :: nu_obs
+!Integer for iterating if needed
+integer(kind=dp) :: i
+
+
+!Convert it to Cartesian
+xTarget = sqrt(rTarget**2 + a2) * sin(thetaTarget) * cos(phiTarget)
+yTarget = sqrt(rTarget**2 + a2) * sin(thetaTarget) * sin(phiTarget)
+zTarget = rTarget * cos(thetaTarget)
+
+print *, 'Targets = ', xTarget, yTarget, zTarget
+
+
+!Initial guess - primary ray
+alpha = yTarget
+beta = zTarget
+
+
+!Set the ray frequency
+nu_obs = 100.0_dp !Doesnt matter for vacuum
+
+!Setup for optimisation
+ds = 100.0_dp
+dg = 2.0_dp
+decay_factor = 2.0_dp
+
+!Do the first run
+call run(alpha,beta,nu_obs,ds,0)
+
+
+!Then optimise to find the minimum
+do while (ds .GT. ds_eps)
+    call pattern_search(alpha,beta,nu_obs,ds)
+enddo
+print *, 'Optimisation converged successfully with alpha/beta/ds = ', alpha,beta,ds
+
+
+
+!Do a a run with the found parameters
+call run(alpha,beta,nu_obs,ds,1)
+
+
+if (secondary_rays .EQ. 1 .and. xTarget .LT. 0.0_dp) then
+    !Reset and search for a secondary ray    
+    print *, 'Searching for seconary ray'
+
+    alpha = -yTarget
+    beta = zTarget
+ 
+    dg = 2.0_dp
+    ds = 100.0_dp    
+
+    decay_factor = 2.0_dp
+   ! decay_factor = 1.01_dp
+
+    call run(alpha,beta,nu_obs,ds,0)
+
+    ds = 1e20
+    do while (ds .GT. ds_eps)
+
+!    do i =1,200
+    call pattern_search(alpha,beta,nu_obs,ds)
+    enddo
+    print *, 'Optimisation converged successfully for secondary ray with alpha/beta/ds = ',alpha,beta, ds
+
+
+
+    call run(alpha,beta,nu_obs,ds,1)
+
+
+endif
+
+
+end subroutine find_intersecting_rays
+
+
+
+
 subroutine run(alpha,beta,nu,ds,plot)
 
 use parameters
@@ -195,8 +266,9 @@ do while (x(1) .GT. Rhor)
     if (c(3) .LT. 0.0_dp) then
  
     call calculate_ds(x,ds)
-
-
+ !   print *, x(1:2), cos(x(3))
+ !   print *, rTarget, thetaTarget,cos(phiTarget)
+ !   print *, '--------'
     code = 2
 
     exit
@@ -215,6 +287,10 @@ enddo
 !I/O
 if (plot .eq. 1) then
 call ToFile(output,counts,alpha,beta,nu,c(1))
+
+
+call calculate_ds_cartesian(output(:,counts),ds)
+
 endif
 
 
@@ -227,7 +303,7 @@ end subroutine run
 
 
 
-subroutine pattern_search(alpha,beta,nu_obs,ds,globals)
+subroutine pattern_search(alpha,beta,nu_obs,ds)
 
 use parameters
 use constants
@@ -237,7 +313,6 @@ implicit none
 !Arguments
 real(kind=dp), intent(inout) :: alpha,beta,ds
 real(kind=dp),intent(in) :: nu_obs
-real(kind=dp), intent(inout),dimension(4) :: globals
 
 
 integer(kind=dp) :: idx
@@ -246,9 +321,18 @@ real(kind=dp),dimension(4) :: ds_collection
 real(kind=dp),dimension(4,2) :: AB_collection
 real(kind=dp) :: aBest, bBest, dsBest
 !Gradient alpha
+
+!print *, 'r1'
+!print *, alpha+dg,beta
 call run(alpha+dg,beta,nu_obs,dsR,0)
+
+!print *, 'r2'
 call run(alpha-dg,beta,nu_obs,dsL,0)
+
+!print *, 'r3'
 call run(alpha, beta+dg, nu_obs, dsU,0)
+
+!print *, 'r4'
 call run(alpha, beta-dg, nu_obs, dsD,0)
 
 
@@ -282,9 +366,7 @@ bBest = AB_collection(idx,2)
 
 dsBest = ds_collection(idx)
 
-print *, aBest, bBest, dsBest
-
-
+print *, 'out = ',aBest, bBest, dsBest,ds,dg,decay_factor
 if (dsBest .LT. ds) then
 alpha = aBest
 beta = bBest
@@ -292,7 +374,24 @@ ds = dsBest
 
 else
 
-dg = dg / 2.0_dp
+dg = dg / decay_factor
+
+if (dg .LT. epsilon(dg)) then
+    !Dont let stepsoie get too small
+    !Reset with difference decay factor
+  
+ !   decay_factor = decay_factor/1.10_dp
+
+  !  ds = 1e20
+   ! dg = 2.0_dp
+ !   alpha = -yTarget
+ !   beta = zTarget
+ !   print *, 'BREAK---------------------'
+
+print *, 'precision limit'
+ds = 1e-21
+return
+endif
 
 endif
 
@@ -459,7 +558,7 @@ real(kind=dp), dimension(6) :: v !input vector
 real(kind=dp) :: ds,x,y,z,r,theta,phi,m
 
 !Load data
-r = v(1) ; theta = v(2) ; phi = v(3) + 2.0_dp * PI
+r = v(1) ; theta = v(2) ; phi = v(3) !+ 2.0_dp * PI
 m = sqrt(r**2 + a2)
 
 !Convert to cartesian
@@ -468,26 +567,41 @@ y = m*sin(theta)*sin(phi)
 z = r*cos(theta)
 
 
-
 !Calcuale the square of the difference
-
-
 ds = (x - xTarget)**2 + (y - yTarget)**2 + (z-zTarget)**2
 
 
-!print *, rTarget, thetaTarget, phiTarget
-!print *, r, theta, phi
-!print *, '------'
-
-!print *, 'cartesian norm:', (x - xTarget)**2 + (y - yTarget)**2 + (z-zTarget)**2
-
-
-!ds = (r - rTarget)**2 + (theta - thetaTarget)**2 + (phi-phiTarget)**2
-
-
+!ds = (r - rTarget)**2 + (cos(theta) - cos(thetaTarget))**2 + (sin(phi)-sin(phiTarget))**2
 
 end subroutine calculate_ds
 
+
+subroutine calculate_ds_cartesian(v,ds)
+
+use parameters
+use constants
+
+implicit none
+
+real(kind=dp), dimension(6) :: v !input vector
+real(kind=dp) :: ds,x,y,z,r,theta,phi,m
+
+!Load data
+r = v(1) ; theta = v(2) ; phi = v(3) !+ 2.0_dp * PI
+m = sqrt(r**2 + a2)
+
+!Convert to cartesian
+x = m*sin(theta)*cos(phi)
+y = m*sin(theta)*sin(phi)
+z = r*cos(theta)
+
+
+!Calcuale the square of the difference
+ds = (x - xTarget)**2 + (y - yTarget)**2 + (z-zTarget)**2
+
+print *, 'Carteisan difference =', ds
+
+end subroutine calculate_ds_cartesian
 
 
 subroutine setup()
@@ -495,15 +609,21 @@ use parameters
 use constants
 !Some useful setup and print statements
 
+!Precision specific 
+
 if (dp .EQ. 8) then
 escal = 1.0e15
 dg = 2.0_dp
-ds_eps = 1e-9
+!ds_eps = 1e-13
+ds_eps = 1e-6
 else if (dp .EQ. 16) then
 escal = 1.0e19
 dg = 1.0e-14 !Numerical gradient
 ds_eps = (1.0e-6)**2
 endif
+
+
+
 
 end subroutine setup
 
