@@ -73,9 +73,10 @@ else if (mode .EQ. 'shoot') then
     print *, 'Origin:', alpha,beta,ds
 
    !Then optimise to find the minimum
-    !do while (ds .GT. ds_eps)
-    do i=1,20
-    call optimise_alpha_beta(alpha,beta,nu_obs,ds,globals)
+ !   do while (ds .GT. ds_eps)
+    do i=1,70
+    !call optimise_alpha_beta(alpha,beta,nu_obs,ds,globals)
+    call pattern_search(alpha,beta,nu_obs,ds,globals)
     enddo
 
 
@@ -224,6 +225,86 @@ end subroutine run
 
 
 
+
+
+subroutine pattern_search(alpha,beta,nu_obs,ds,globals)
+
+use parameters
+use constants
+
+implicit none
+
+!Arguments
+real(kind=dp), intent(inout) :: alpha,beta,ds
+real(kind=dp),intent(in) :: nu_obs
+real(kind=dp), intent(inout),dimension(4) :: globals
+
+
+integer(kind=dp) :: idx
+real(kind=dp) :: dsR, dsL, dsU, dsD
+real(kind=dp),dimension(4) :: ds_collection
+real(kind=dp),dimension(4,2) :: AB_collection
+real(kind=dp) :: aBest, bBest, dsBest
+!Gradient alpha
+call run(alpha+dg,beta,nu_obs,dsR,0)
+call run(alpha-dg,beta,nu_obs,dsL,0)
+call run(alpha, beta+dg, nu_obs, dsU,0)
+call run(alpha, beta-dg, nu_obs, dsD,0)
+
+
+ds_collection(1) = dsR 
+ds_collection(2) = dsL 
+ds_collection(3) = dsU 
+ds_collection(4) = dsD 
+
+
+AB_collection(1,1) = alpha+ dg
+AB_collection(1,2) = beta
+
+
+AB_collection(2,1) = alpha- dg
+AB_collection(2,2) = beta
+
+AB_collection(3,1) = alpha
+AB_collection(3,2) = beta + dg
+
+
+AB_collection(4,1) = alpha
+AB_collection(4,2) = beta - dg
+
+
+
+idx = minloc(ds_collection,1)
+
+
+aBest = AB_collection(idx,1)
+bBest = AB_collection(idx,2)
+
+dsBest = ds_collection(idx)
+
+print *, aBest, bBest, dsBest
+
+
+if (dsBest .LT. ds) then
+alpha = aBest
+beta = bBest
+ds = dsBest
+
+else
+
+dg = dg / 2.0_dp
+
+endif
+
+
+
+
+
+
+end subroutine pattern_search
+
+
+
 subroutine optimise_alpha_beta(alpha,beta,nu_obs,ds,globals)
 
 use parameters
@@ -247,10 +328,13 @@ real(kind=dp) :: trial_alpha, trial_beta
 
 !Get the gradients in the alpha/beta directions
 
+
+
+
+
 !Gradient alpha
 call run(alpha+dg,beta,nu_obs,ds_alpha,0)
 gA = - ((ds_alpha - ds)/dg)
-
 
 !Gradient beta
 call run(alpha,beta+dg,nu_obs,ds_beta,0)
@@ -281,6 +365,8 @@ t = global_t !5e-9
 ds1 = 1e20
 
 
+print *, 'start iteration'
+print *, 'gradient = ', hA
 11 do 
 
     !Trial values
@@ -291,7 +377,6 @@ ds1 = 1e20
     call run(trial_alpha,trial_beta,nu_obs,ds_trial,0)
 
     print *, 'Tr:', trial_alpha,ds_trial,t
-
     if (ds_trial .LT. ds) then
 
     !Update the best values
@@ -300,8 +385,6 @@ ds1 = 1e20
     ds1 = ds_trial
     global_t = t 
 
-
-
     exit
 
 
@@ -309,9 +392,12 @@ ds1 = 1e20
     !Has stopped improving.
     !Use this stepsize going forwards
     
+    stop
+
     !exit
-    if (t .LT. 1e-7) then
+    if (t .LT. dg / 1e6) then
     print *, 'no iszeable change', ds1,ds
+    dg = dg / 10.0_dp
     exit    
     endif
 
@@ -340,7 +426,13 @@ else
 !Reset, gives it a kick
 print *, 'Failure- needs reset'
 print *, 'Gradients', gA, gB
-print *, 'attempt = ', alpha,t*hA
+print *, 'adjusting gradient stepsie:', dg
+
+
+if ((alpha + dg) .EQ. alpha) then
+stop
+endif
+
 globals = 0.0_dp
 !stop
 !global_t = 1e-3 !1.0_dp !global_t/10.0_dp
@@ -383,7 +475,11 @@ z = r*cos(theta)
 ds = (x - xTarget)**2 + (y - yTarget)**2 + (z-zTarget)**2
 
 
-print *, 'cartesian norm:', (x - xTarget)**2 + (y - yTarget)**2 + (z-zTarget)**2
+!print *, rTarget, thetaTarget, phiTarget
+!print *, r, theta, phi
+!print *, '------'
+
+!print *, 'cartesian norm:', (x - xTarget)**2 + (y - yTarget)**2 + (z-zTarget)**2
 
 
 !ds = (r - rTarget)**2 + (theta - thetaTarget)**2 + (phi-phiTarget)**2
@@ -401,8 +497,8 @@ use constants
 
 if (dp .EQ. 8) then
 escal = 1.0e15
-dg = 1e-5
-ds_eps = 1e-1
+dg = 2.0_dp
+ds_eps = 1e-9
 else if (dp .EQ. 16) then
 escal = 1.0e19
 dg = 1.0e-14 !Numerical gradient

@@ -3,8 +3,8 @@ implicit none
 
 
 !Define float precision
-!integer, parameter :: dp = selected_real_kind(15, 307)
-integer, parameter :: dp = selected_real_kind(33, 4931)
+integer, parameter :: dp = selected_real_kind(15, 307)
+!integer, parameter :: dp = selected_real_kind(33, 4931)
 
 !Define useful stuff
 real(kind=dp), parameter :: PI = 4.D0*ATAN(1.D0) 
