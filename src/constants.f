@@ -30,7 +30,7 @@ real(kind=dp) :: xTarget, yTarget, zTarget
 real(kind=dp) :: rTarget,thetaTarget, phiTarget
 
 !Set the 'x precision' for intersection search
-real(kind=dp),parameter :: dx_eps = epsilon(Rhor)
+real(kind=dp),parameter :: dx_eps = 1.0e-12 !epsilon(Rhor)
 
 !Set the target intersection precision
 real(kind=dp) :: ds_eps 
@@ -41,6 +41,12 @@ real(kind=dp) :: dg
 !Used in pattern search
 real(kind=dp) :: decay_factor
 
+
+!Define Eobs_globally
+real(kind=dp) :: Eobs_global
+
+! 4 -velocity of loaded  positions
+real(kind=dp), dimension(4) :: uvector
 
 
 !Temporay

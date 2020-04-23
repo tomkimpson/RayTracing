@@ -16,7 +16,7 @@ real(kind=dp), parameter :: a= +0.9980_dp !BH spin parameter Now set later
 
 
 !Observer location
-real(kind=dp), parameter :: r_obs = 1000.0_dp
+real(kind=dp), parameter :: r_obs = 1.0e4
 real(kind=dp), parameter :: theta_obs = PI/2.0_dp
 
 !Plasma density profile normalisation
@@ -34,6 +34,11 @@ character(len=20), parameter :: mode = 'shoot' ! 'frequency', 'image', 'equator'
 !Parameters used if forward ray tracing
 real(kind=dp), parameter :: r_init = 800.0_dp , theta_init = PI/2.0_dp, phi_init = 0.0_dp
 real(kind=dp), parameter :: dir_theta = PI/4.0_dp , dir_phi = 0.0_dp !0.0_dp
+
+
+!Parameters used if shooting
+integer(kind=dp), parameter :: load = 1
+character(len=200) :: targets_file = "/Users/tomkimpson/Data/ThesisData/MPD/targets.txt"
 integer(kind=dp), parameter :: secondary_rays = 1 !Turn on/off search for seconary rays
 
 

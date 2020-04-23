@@ -16,7 +16,7 @@ contains
 
 
 
-subroutine pattern_search(alpha,beta,nu_obs,ds)
+subroutine pattern_search(alpha,beta,nu_obs,ds,stat)
 
 use parameters
 use constants
@@ -26,7 +26,7 @@ implicit none
 !Arguments
 real(kind=dp), intent(inout) :: alpha,beta,ds
 real(kind=dp),intent(in) :: nu_obs
-
+integer(kind=dp), intent(out) :: stat !status - did we exit ok, or else interrupt by error/precision limit
 
 integer(kind=dp) :: idx
 real(kind=dp) :: dsR, dsL, dsU, dsD
@@ -35,17 +35,12 @@ real(kind=dp),dimension(4,2) :: AB_collection
 real(kind=dp) :: aBest, bBest, dsBest
 !Gradient alpha
 
-!print *, 'r1'
-!print *, alpha+dg,beta
 call run(alpha+dg,beta,nu_obs,dsR,0)
 
-!print *, 'r2'
 call run(alpha-dg,beta,nu_obs,dsL,0)
 
-!print *, 'r3'
 call run(alpha, beta+dg, nu_obs, dsU,0)
 
-!print *, 'r4'
 call run(alpha, beta-dg, nu_obs, dsD,0)
 
 
@@ -81,6 +76,19 @@ dsBest = ds_collection(idx)
 
 !print *, 'out = ',aBest, bBest, dsBest,ds,dg,decay_factor
 
+
+if (dsBest .lt. epsilon(dsBest)) then
+! Has fallen ino BH likely
+print *, 'Fallen into BH'
+stat = 1 !Exit condition
+return
+endif
+
+
+
+
+
+
 if (dsBest .LT. ds) then
 alpha = aBest
 beta = bBest
@@ -90,11 +98,16 @@ else
 
 dg = dg / decay_factor
 
-if (dg .LT. epsilon(dg)) then
+if (dg .LT. epsilon(dg) .or. dsBest .eq. 0.0_dp) then
     !Dont let stepsoie get too small
-    print *, 'precision limit'
-    !Set ds small so outer loop exits
-    ds = 1e-21
+
+    !Also guard against BH fall in
+
+    print *, 'REACHED PRECSIION LIMIT------------------------------------'
+    print *, rTarget, thetaTarget, phiTarget
+    print *, 'Best ds = ', ds
+    stat = 1 !Exit condition
+
     return
 endif
 

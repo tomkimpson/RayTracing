@@ -112,8 +112,16 @@ errmax = escal * maxval(ratio)
 
 if (mode .EQ. 'shoot') then
     !Search for overstep c.f. target point
-    dx = ynew(1) - rTarget
+ 
 
+    x = sqrt(ynew(1)**2 + a2) *sin(ynew(2))*cos(ynew(3))
+
+    dx = x - xTarget
+  !  print *, x,xTarget,dx, intersecting
+
+   !    dx = ynew(1) - rTarget
+   ! print *, ynew(1), rTarget, dx
+    
 
     if (y(1) .eq. ynew(1)) then
     !stepsize is so small that variables are no longer updating    
@@ -128,6 +136,8 @@ if (mode .EQ. 'shoot') then
     c(3) = -2.0_dp !Signifies to outer routine to quit
     y(1) = 1e10    
     
+!    print *, 'sds1', dx_eps
+!    stop
     !and exit
     return
     endif
@@ -139,13 +149,16 @@ if (mode .EQ. 'shoot') then
     !Update and exit
     y = ynew
     c(3) = -1.0_dp !Signifies to outer routine to quit
-    return
+ !   print *, 'ere'
+ !   stop
+   return
     endif
 
 
     !Define the overshoot condition
     if (xTarget .LT. 0.0_dp) then
-        overshoot_condition = (dx .GT. 0.0_dp .and. k1(1) .GT. 0.0_dp)
+    !    overshoot_condition = (dx .GT. 0.0_dp .and. k1(1) .GT. 0.0_dp)
+        overshoot_condition = (dx .LT. 0.0_dp .and. k1(1) .GT. 0.0_dp)
     else
         overshoot_condition = (dx .LT. 0.0_dp .and. k1(1) .LT. 0.0_dp)
     endif
@@ -161,6 +174,9 @@ if (mode .EQ. 'shoot') then
     c(3) = c(3) / 1.10_dp
     goto 11
     endif
+
+    
+
 
 
 

@@ -57,9 +57,14 @@ do while (x(1) .GT. Rhor)
    
     !Exit condition. Intersection search
     if (c(3) .LT. 0.0_dp) then
- 
     call calculate_ds(x,ds)
     code = 2
+
+
+
+    if (plot .ne.0 ) then
+    print *, 'Final:', x
+    endif
 
     exit
     endif
@@ -75,12 +80,8 @@ enddo
 
 
 !I/O
-if (plot .eq. 1) then
-call ToFile(output,counts,alpha,beta,nu,c(1))
-
-
-!call calculate_ds_cartesian(output(:,counts),ds)
-
+if (plot .ne. 0) then
+call ToFile(output,counts,alpha,beta,nu,c,plot)
 endif
 
 

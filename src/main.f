@@ -18,8 +18,6 @@ if (mode .EQ. 'frequency') then
     call subroutine_frequency()
     
 else if (mode .EQ. 'shoot') then
-    !Set target    
-    rTarget = 160.0_dp ; thetaTarget = PI/2.0_dp ; phiTarget = 1.90_dp 
     call subroutine_shoot()
 
 else if (mode .EQ. 'image') then
@@ -78,11 +76,6 @@ enddo
 
 
 end subroutine subroutine_equator
-
-
-
-
-
 
 
 
@@ -149,7 +142,6 @@ end subroutine subroutine_single
 
 
 
-
 subroutine subroutine_frequency()
 
 
@@ -197,7 +189,13 @@ use parameters
 use constants
 implicit none
 
+!For iterating
 integer(kind=dp) :: i
+
+!For reading
+integer(kind=dp) :: IOstatus
+real(kind=dp), dimension(11) :: read_row
+
 
     if (IntegrationType .EQ. 'Forwards') then
     print *, "Error: Cannot do forward integration in shooting mode"
@@ -213,10 +211,42 @@ integer(kind=dp) :: i
 
 
 
-    do i = 1,5
-    phiTarget = phiTarget + 0.10_dp 
-    call find_intersecting_rays()
-    enddo
+    if (load .eq. 1) then
+        !Load the target points from file
+        IOstatus = 0
+        open(unit=15, file = targets_file,status='old',access='sequential',form='formatted',action='read')
+
+
+        do
+            read(15,*,IOSTAT=IOstatus) read_row
+        
+            if (IOstatus .EQ. 0)then
+                rTarget = read_row(9); thetaTarget = read_row(10); phiTarget = read_row(11)
+ !               rTarget = 219.96460677885887    ;thetaTarget= 1.5707963267880871 ; phiTarget=  3.1329373667919755 
+            !    rTarget = 197.60074342080654; thetaTarget=1.5707963269538816 ; phiTarget= 4.8012548074405341
+                uvector(1:4) = read_row(5:8)
+                print *, 'U in=', uvector
+                print *, ' polar Target = ', rTarget,thetaTarget,phiTarget            
+                call find_intersecting_rays()
+            else
+                print *, 'reached end of file'
+                close(15)
+                exit
+            endif
+
+
+        
+        enddo
+        
+        close(15)
+
+
+    else
+        !Just specify by hand    
+        rTarget = 160.0_dp ; thetaTarget = PI/2.0_dp ; phiTarget = 1.90_dp 
+        call find_intersecting_rays()
+    endif
+
 
 
 end subroutine subroutine_shoot
@@ -241,15 +271,20 @@ real(kind=dp) :: ds
 !Frequency - doesnt matter here but needs to be set
 real(kind=dp) :: nu_obs
 !Integer for iterating if needed
-integer(kind=dp) :: i
+integer(kind=dp) :: i,stat
 
+
+!temporary for debugginh
+real(kind=dp) :: dl
 
 !Convert it to Cartesian
 xTarget = sqrt(rTarget**2 + a2) * sin(thetaTarget) * cos(phiTarget)
 yTarget = sqrt(rTarget**2 + a2) * sin(thetaTarget) * sin(phiTarget)
 zTarget = rTarget * cos(thetaTarget)
 
-print *, 'Targets = ', xTarget, yTarget, zTarget
+print *, 'Cartesian Targets = ', xTarget, yTarget, zTarget
+
+
 
 !Initial guess - primary ray
 alpha = yTarget
@@ -264,49 +299,72 @@ ds = 100.0_dp
 dg = 2.0_dp
 decay_factor = 2.0_dp
 
+
+stat = 0
 !Do the first run
 call run(alpha,beta,nu_obs,ds,0)
 
 
+
 !Then optimise to find the minimum
 do while (ds .GT. ds_eps)
-    call pattern_search(alpha,beta,nu_obs,ds)
+    call pattern_search(alpha,beta,nu_obs,ds,stat)
+    if (stat .eq. 1) then
+    exit
+    endif
+
 enddo
-print *, 'Optimisation converged successfully with alpha/beta/ds = ', alpha,beta,ds
 
 
+!Do a run with the found parameters
+    if (stat .eq. 0) then
+        print *, 'Optimisation converged successfully for primary ray with alpha/beta/ds = ',alpha,beta, ds
+        call run(alpha,beta,nu_obs,ds,1)
+    else
 
-!Do a a run with the found parameters
-call run(alpha,beta,nu_obs,ds,1)
+        print *, 'Optimisation reached a precision limit for the primary ray with alpha/beta/ds= ',alpha,beta,ds
+        call run(alpha,beta,nu_obs,ds,2)
+
+    endif
+
+
 
 
 if (secondary_rays .EQ. 1 .and. xTarget .LT. 0.0_dp) then
     !Reset and search for a secondary ray    
-    print *, 'Searching for seconary ray'
+    print *, 'Searching for secondary ray'
 
     alpha = -yTarget
     beta = zTarget
  
     dg = 2.0_dp
     ds = 100.0_dp    
-
     decay_factor = 2.0_dp
-   ! decay_factor = 1.01_dp
 
     call run(alpha,beta,nu_obs,ds,0)
 
+
     ds = 1e20
     do while (ds .GT. ds_eps)
+    call pattern_search(alpha,beta,nu_obs,ds,stat)
 
-!    do i =1,200
-    call pattern_search(alpha,beta,nu_obs,ds)
+    if (stat .eq. 1) then
+    !AHs reached precision limit
+    exit
+    endif
+
+
     enddo
-    print *, 'Optimisation converged successfully for secondary ray with alpha/beta/ds = ',alpha,beta, ds
 
+    if (stat .eq. 0) then
+        print *, 'Optimisation converged successfully for secondary ray with alpha/beta/ds = ',alpha,beta, ds
+        call run(alpha,beta,nu_obs,ds,1)
+    else
 
+        print *, 'Optimisation reached a precision limit for the secondary ray with alpha/beta/ds= ',alpha,beta,ds
+        call run(alpha,beta,nu_obs,ds,2)
 
-    call run(alpha,beta,nu_obs,ds,1)
-
+    endif
 
 endif
 
