@@ -3,8 +3,8 @@ implicit none
 
 
 !Define float precision
-integer, parameter :: dp = selected_real_kind(15, 307)
-!integer, parameter :: dp = selected_real_kind(33, 4931)
+!integer, parameter :: dp = selected_real_kind(15, 307)
+integer, parameter :: dp = selected_real_kind(33, 4931)
 
 !Define useful stuff
 real(kind=dp), parameter :: PI = 4.D0*ATAN(1.D0) 
@@ -21,7 +21,7 @@ real(kind=dp), parameter :: theta_obs = PI/2.0_dp
 
 !Plasma density profile normalisation
 !Set = 0 for vacuum
-real(kind=dp), parameter :: N0 =0.0_dp !3.50e7 !1.0e8 
+real(kind=dp), parameter :: N0 = 3.50e7 !1.0e8 
 
 !Integration parameters
 character(len=20), parameter :: IntegrationType = 'Backwards' !Forwards/Backwards
@@ -37,10 +37,12 @@ real(kind=dp), parameter :: dir_theta = PI/4.0_dp , dir_phi = 0.0_dp !0.0_dp
 
 
 !Parameters used if shooting
-integer(kind=dp), parameter :: load = 1
+integer(kind=dp), parameter :: load = 0 !Do you want to load the target points?
 character(len=200) :: targets_file = "/Users/tomkimpson/Data/ThesisData/MPD/targets.txt"
 integer(kind=dp), parameter :: secondary_rays = 1 !Turn on/off search for seconary rays
-
+character(len=20), parameter :: optimizer = 'CGD' ! Set the optimisation method used 
+!'CGD' - conjugate gradient descent. !Use with high precision
+!'PS' - pattern serach. USe with low precision
 
 !IO parameters
 integer(kind=dp) :: Nrows = 6, Ncols = 1e6

@@ -195,7 +195,7 @@ integer(kind=dp) :: i
 !For reading
 integer(kind=dp) :: IOstatus
 real(kind=dp), dimension(11) :: read_row
-
+real(kind=dp) :: nu_obs
 
     if (IntegrationType .EQ. 'Forwards') then
     print *, "Error: Cannot do forward integration in shooting mode"
@@ -205,8 +205,7 @@ real(kind=dp), dimension(11) :: read_row
 
 
     if (N0 .ne. 0.0_dp) then
-    print *, 'You are no longer ray tracing in vacuum. Check the frequency'
-    stop
+    print *, 'You are no longer ray tracing in vacuum. Be sure to check the frequency'
     endif
 
 
@@ -222,12 +221,12 @@ real(kind=dp), dimension(11) :: read_row
         
             if (IOstatus .EQ. 0)then
                 rTarget = read_row(9); thetaTarget = read_row(10); phiTarget = read_row(11)
- !               rTarget = 219.96460677885887    ;thetaTarget= 1.5707963267880871 ; phiTarget=  3.1329373667919755 
-            !    rTarget = 197.60074342080654; thetaTarget=1.5707963269538816 ; phiTarget= 4.8012548074405341
                 uvector(1:4) = read_row(5:8)
                 print *, 'U in=', uvector
                 print *, ' polar Target = ', rTarget,thetaTarget,phiTarget            
-                call find_intersecting_rays()
+                
+                nu_obs = 1.0_dp
+                call find_intersecting_rays(nu_obs,1)
             else
                 print *, 'reached end of file'
                 close(15)
@@ -243,9 +242,14 @@ real(kind=dp), dimension(11) :: read_row
 
     else
         !Just specify by hand    
-        rTarget = 160.0_dp ; thetaTarget = PI/2.0_dp ; phiTarget = 1.90_dp 
-        call find_intersecting_rays()
-    endif
+        rTarget = 160.0_dp ; thetaTarget = PI/2.0_dp ; phiTarget = 2.80_dp 
+        nu_obs = 0.10_dp
+        
+        do i = 1,10
+            nu_obs = nu_obs + 1.0_dp
+            call find_intersecting_rays(nu_obs,1)
+        enddo
+   endif
 
 
 
@@ -255,7 +259,7 @@ end subroutine subroutine_shoot
 
 
 
-subroutine find_intersecting_rays()
+subroutine find_intersecting_rays(nu_obs,ray_order)
 
 use parameters
 use constants
@@ -264,40 +268,70 @@ use optimization
 
 implicit none
 
+!priamry/secondary ray
+integer(kind=4), intent(in) :: ray_order
+
 !Imsge plane coords
 real(kind=dp) :: alpha,beta
 !f(alpha,beta) = ds
 real(kind=dp) :: ds
-!Frequency - doesnt matter here but needs to be set
-real(kind=dp) :: nu_obs
-!Integer for iterating if needed
+!Frequency
+real(kind=dp),intent(in) :: nu_obs
+
+!Integers
 integer(kind=dp) :: i,stat
 
 
-!temporary for debugginh
-real(kind=dp) :: dl
+!Globals - used for high precision gradient descent
+real(kind=dp),dimension(4) :: globals
+
 
 !Convert it to Cartesian
 xTarget = sqrt(rTarget**2 + a2) * sin(thetaTarget) * cos(phiTarget)
 yTarget = sqrt(rTarget**2 + a2) * sin(thetaTarget) * sin(phiTarget)
 zTarget = rTarget * cos(thetaTarget)
-
 print *, 'Cartesian Targets = ', xTarget, yTarget, zTarget
 
 
 
 !Initial guess - primary ray
-alpha = yTarget
+
+!This should really be a subroutine
+
+if (N0 .ne. 0.0_dp) then
+!If youre not working in vacuum assumes that you are just looking at a single target point
+!Useful as can then use previous info for initial alpha,beta guess
+
+
+if (alpha_previous .ne. 0.0_dp) then
+
+alpha = alpha_previous ; beta = beta_previous
+
+else
+
+if (ray_order .eq. 1) then
+    alpha = yTarget
+elseif (ray_order .eq. 2) then
+    alpha = -yTarget
+endif
 beta = zTarget
 
 
-!Set the ray frequency
-nu_obs = 100.0_dp !Doesnt matter for vacuum
+endif
 
-!Setup for optimisation
-ds = 100.0_dp
-dg = 2.0_dp
-decay_factor = 2.0_dp
+
+
+
+
+endif
+
+
+
+
+print *, alpha_previous, beta_previous
+print *, alpha,beta
+
+
 
 
 stat = 0
@@ -306,92 +340,63 @@ call run(alpha,beta,nu_obs,ds,0)
 
 
 
-!Then optimise to find the minimum
-do while (ds .GT. ds_eps)
-    call pattern_search(alpha,beta,nu_obs,ds,stat)
-    
-    if (stat .ne. 0) then
-    exit
-    endif
+!Setup for optimisation
+if (optimizer .eq. 'CGD') then
+globals = 0.0_dp
+global_t = 5.0d-9 
 
-enddo
+print *, 'Begig optimization for ray order =', ray_order, ' and optimizer= ', optimizer
 
 
-!Do a run with the found parameters
-    if (stat .eq. 0) then
-        print *, 'Optimisation converged successfully for primary ray with alpha/beta/ds = ',alpha,beta, ds
-        call run(alpha,beta,nu_obs,ds,1)
-    
-
-    elseif (stat .eq. 5) then
-    print *, '------------------------Fell into BH-----------------------------'
-    print *, '------------------------Fell into BH-----------------------------'
-    print *, '------------------------Fell into BH-----------------------------'
-    print *, 'targets =', rTarget, thetaTarget, phiTarget
-    call run(alpha,beta,nu_obs,ds,3)
-
-    else
-
-        print *, 'Optimisation reached a precision limit for the primary ray with alpha/beta/ds= ',alpha,beta,ds
-        call run(alpha,beta,nu_obs,ds,10)
-
-    endif
-
-
-
-
-if (secondary_rays .EQ. 1 .and. xTarget .LT. 0.0_dp) then
-    !Reset and search for a secondary ray    
-    print *, 'Searching for secondary ray'
-
-    alpha = -yTarget
-    beta = zTarget
- 
-    dg = 2.0_dp
-    ds = 100.0_dp    
-    decay_factor = 2.0_dp
-
-    stat = 0
-    call run(alpha,beta,nu_obs,ds,0)
-
-
-    ds = 1e20
     do while (ds .GT. ds_eps)
-    call pattern_search(alpha,beta,nu_obs,ds,stat)
+    call optimise_alpha_beta(alpha,beta,nu_obs,ds,stat,globals)
+ 
 
     if (stat .ne. 0) then
-    !AHs reached precision limit
     exit
     endif
 
 
     enddo
 
-    if (stat .eq. 0) then
-        print *, 'Optimisation converged successfully for secondary ray with alpha/beta/ds = ',alpha,beta, ds
-        call run(alpha,beta,nu_obs,ds,2)
- 
 
+elseif (optimizer .eq. 'PS') then
+dg = 2.0_dp
+decay_factor = 2.0_dp
 
-    elseif (stat .eq. 5) then
-
-    print *, 'Fell into BH'
+    do while (ds .GT. ds_eps)
+    call pattern_search(alpha,beta,nu_obs,ds,stat)
     
-    print *, '------------------------Fell into BH-----------------------------'
-    print *, '------------------------Fell into BH-----------------------------'
-    print *, '------------------------Fell into BH-----------------------------'
-    print *, 'targets =', rTarget, thetaTarget, phiTarget
 
 
-    call run(alpha,beta,nu_obs,ds,3)
-
-   else
-        print *, 'Optimisation reached a precision limit for the secondary ray with alpha/beta/ds= ',alpha,beta,ds
-        call run(alpha,beta,nu_obs,ds,20)
-
+    
+    if (stat .ne. 0) then
+    exit
     endif
 
+
+
+    enddo
+
+else
+print *, 'Optimiser type:', optimizer, ' not recognized'
+stop
+
 endif
+
+
+
+
+!Do a run with the found parameters
+if (stat .eq. 0) then
+print *, 'Optimisation converged successfully for ray ',ray_order , ' with alpha/beta/ds = ',alpha,beta, ds
+call run(alpha,beta,nu_obs,ds,1)
+
+alpha_previous = alpha
+beta_previous = beta
+
+endif
+    
 
 end subroutine find_intersecting_rays
 
@@ -417,12 +422,14 @@ use constants
 if (dp .EQ. 8) then
 escal = 1.0e15
 dg = 2.0_dp
-!ds_eps = 1e-13
 ds_eps = 1e-6
+dx_eps = 1.0e-12 
 else if (dp .EQ. 16) then
 escal = 1.0e19
-dg = 1.0e-14 !Numerical gradient
+bit = 1.0e-16 !Numerical gradient
+dx_eps = 1.0d-19 
 ds_eps = (1.0e-6)**2
+!ds_eps = 1e-2
 endif
 
 

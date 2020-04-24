@@ -9,7 +9,7 @@ implicit none
 
 private 
 
-public pattern_search
+public pattern_search, optimise_alpha_beta
 
 contains
 
@@ -122,146 +122,139 @@ end subroutine pattern_search
 
 
 
-! subroutine optimise_alpha_beta(alpha,beta,nu_obs,ds,globals)
-! 
-! use parameters
-! use constants
-! 
-! implicit none
-! 
-! !Arguments
-! real(kind=dp), intent(inout) :: alpha,beta,ds
-! real(kind=dp),intent(in) :: nu_obs
-! real(kind=dp), intent(inout),dimension(4) :: globals
-! 
-! !Other
-! real(kind=dp) :: ds_alpha, ds_beta
-! real(kind=dp) :: gA, gB
-! real(kind=dp) :: zeta,hA,hB
-! real(kind=dp) :: eta, t, ds_trial
-! real(kind=dp) :: ds1, alpha1, beta1
-! real(kind=dp) :: trial_alpha, trial_beta
-! 
-! 
-! !Get the gradients in the alpha/beta directions
-! 
-! 
-! 
-! 
-! 
-! !Gradient alpha
-! call run(alpha+dg,beta,nu_obs,ds_alpha,0)
+ subroutine optimise_alpha_beta(alpha,beta,nu_obs,ds,stat,globals)
+ 
+ use parameters
+ use constants
+ 
+ implicit none
+ 
+ !Arguments
+ real(kind=dp), intent(inout) :: alpha,beta,ds
+ real(kind=dp),intent(in) :: nu_obs
+ integer(kind=dp), intent(out) :: stat   
+ real(kind=dp), intent(inout),dimension(4) :: globals
+ 
+ !Other
+ real(kind=dp) :: ds_alpha, ds_beta
+ real(kind=dp) :: gA, gB
+ real(kind=dp) :: zeta,hA,hB
+ real(kind=dp) :: eta, t, ds_trial
+ real(kind=dp) :: ds1, alpha1, beta1
+ real(kind=dp) :: trial_alpha, trial_beta
+ 
+ 
+ !Get the gradients in the alpha/beta directions
+ 
+ 
+
+!print *, 'dg = ', bit
+ 
+ 
+ !Gradient alpha
+ call run(alpha+bit,beta,nu_obs,ds_alpha,0)
+ gA = - ((ds_alpha - ds)/bit)
+! print *, ds_alpha, ds, ds_alpha -ds    
+
+
+! call run(alpha-bit,beta,nu_obs,ds_alpha,1)
 ! gA = - ((ds_alpha - ds)/dg)
-! 
-! !Gradient beta
-! call run(alpha,beta+dg,nu_obs,ds_beta,0)
-! gB = - ((ds_beta - ds)/dg)
-! 
-! 
-! if (globals(1) .EQ. 0.0_dp) then
-! !First go
-! zeta = 0.0_dp
-! else
-! zeta = (gA*gA +gB*gB)/(globals(1)**2 + globals(2)**2)
-! endif
-! 
-! hA = gA +zeta*globals(3)
-! hB = gB +zeta*globals(4)
-! 
-! 
-! !Normalise the direction. Just tells you higher or lower info now
-! hB = gB / abs(gA)
-! hA = gA / abs(gA)
-! 
-! 
-! 
-! 
-! !Got the direction, now get the stepsizze by performing a line search
-! eta = 2.0_dp !0.50_dp
-! t = global_t !5e-9
-! ds1 = 1e20
-! 
-! 
-! print *, 'start iteration'
-! print *, 'gradient = ', hA
-! 11 do 
-! 
-!     !Trial values
-!     trial_alpha = alpha + t*hA
-!     trial_beta = beta + t*hB
-! 
-!     !Try a step in the direction
-!     call run(trial_alpha,trial_beta,nu_obs,ds_trial,0)
-! 
-!     print *, 'Tr:', trial_alpha,ds_trial,t
-!     if (ds_trial .LT. ds) then
-! 
-!     !Update the best values
-!     alpha1 = alpha+t*hA
-!     beta1 = beta+t*hB
-!     ds1 = ds_trial
-!     global_t = t 
-! 
-!     exit
-! 
-! 
-!     else
-!     !Has stopped improving.
-!     !Use this stepsize going forwards
-!     
-!     stop
-! 
-!     !exit
-!     if (t .LT. dg / 1e6) then
-!     print *, 'no iszeable change', ds1,ds
-!     dg = dg / 10.0_dp
-!     exit    
-!     endif
-! 
-! 
-!     t = t/eta
-!     goto 11
-!     endif
-! 
-! 
-! 
-! 
-! 
-! 
-! enddo
-! 
-! 
-! 
-! 
-! !Update before exiting subroutine 
-! 
-! if (ds1 .LT. ds) then
-! globals(1) = gA ; globals(2) = gB ; globals(3) = hA ; globals(4) = hB
-! alpha = alpha1 ; beta = beta1 ; ds = ds1
-! 
-! else
-! !Reset, gives it a kick
-! print *, 'Failure- needs reset'
-! print *, 'Gradients', gA, gB
-! print *, 'adjusting gradient stepsie:', dg
-! 
-! 
-! if ((alpha + dg) .EQ. alpha) then
-! stop
-! endif
-! 
-! globals = 0.0_dp
-! !stop
-! !global_t = 1e-3 !1.0_dp !global_t/10.0_dp
-! endif
-! 
-! 
-! 
-! !print *, 'out = ', alpha,beta,ds
-! print *, '---------------------'
-! !stop
-! 
-! end subroutine optimise_alpha_beta
+! print *, ds_alpha -ds    
+
+
+
+
+
+ !Gradient beta
+ call run(alpha,beta+bit,nu_obs,ds_beta,0)
+ gB = - ((ds_beta - ds)/bit)
+ !print *, ds_beta - ds    
+
+
+ !call run(alpha,beta-bit,nu_obs,ds_beta,1)
+ !gB = - ((ds_beta - ds)/dg)
+ !print *, ds_beta - ds    
+
+!stop
+
+
+
+ if (globals(1) .EQ. 0.0_dp) then
+ !First go
+ zeta = 0.0_dp
+ else
+ zeta = (gA*gA +gB*gB)/(globals(1)**2 + globals(2)**2)
+ endif
+ 
+ hA = gA +zeta*globals(3)
+ hB = gB +zeta*globals(4)
+ 
+ 
+ 
+ !Got the direction, now get the stepsizze by performing a line search
+ eta = 2.0_dp !0.50_dp
+ t = global_t    
+ ds1 = 1e20
+ 
+
+!tracking line search         
+ do 
+ 
+     !Trial values
+     trial_alpha = alpha + t*hA
+     trial_beta = beta + t*hB
+ 
+     !Try a step in the direction
+     call run(trial_alpha,trial_beta,nu_obs,ds_trial,0)
+ 
+     print *, 'Trial:', ds, ds_trial,t
+
+
+     if (ds_trial .lt. ds1) then   
+     !Update and exit
+     alpha1 = trial_alpha        
+     beta1 = trial_beta        
+     ds1 = ds_trial      
+  
+  
+    else
+
+    exit    
+
+    endif   
+
+    t = t*eta
+ 
+ enddo
+ 
+ 
+
+
+if (ds1 .lt. ds) then
+print *, 'Good'
+alpha = alpha1 ; beta = beta1 ; ds = ds1
+global_t = t/5.0_dp
+!global_t = 5d-9
+else
+!globals = 0.0_dp
+global_t = 5d-9
+global_counter = global_counter + 1
+print *, 'bad', global_counter
+endif
+
+
+
+globals(1) = gA ; globals(2) = gB ; globals(3) = hA ; globals(4) = hB
+print *, '----------------------'
+
+
+if (global_counter .GT. 10) then
+globals=0.0_dp 
+global_counter = 0
+print *, 'resetting globals'
+endif
+
+ end subroutine optimise_alpha_beta
 
 
 

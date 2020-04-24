@@ -8,6 +8,12 @@ The code solves a set of ODEs numerically. We use a Hamiltonian formulation as d
 ## Getting Started
 ...
 
+
+
+## Notes
+
+
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details

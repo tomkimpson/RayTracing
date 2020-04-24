@@ -30,13 +30,13 @@ real(kind=dp) :: xTarget, yTarget, zTarget
 real(kind=dp) :: rTarget,thetaTarget, phiTarget
 
 !Set the 'x precision' for intersection search
-real(kind=dp),parameter :: dx_eps = 1.0e-12 !epsilon(Rhor)
+real(kind=dp) :: dx_eps
 
 !Set the target intersection precision
 real(kind=dp) :: ds_eps 
 
 !Set the gradient bit
-real(kind=dp) :: dg 
+real(kind=dp) :: dg,bit
 
 !Used in pattern search
 real(kind=dp) :: decay_factor
@@ -49,9 +49,12 @@ real(kind=dp) :: Eobs_global
 real(kind=dp), dimension(4) :: uvector
 
 
+!A globally defined alha beta that new rays can reference
+real(kind=dp) :: alpha_previous = 0.0_dp, beta_previous=0.0_dp
+
 !Temporay
 real(kind=dp) :: global_t = 10.0_dp
-
+integer(kind=dp) :: global_counter 
 
 
 !Integration constants

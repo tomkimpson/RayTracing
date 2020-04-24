@@ -24,7 +24,6 @@ real(kind=dp),dimension(4) :: pvector,zamo_vector
 real(kind=dp),dimension(4,4) :: metric
 
 !Define savefile
-print *, 'IO=',alpha
 write(aStr,'(F16.10)') alpha
 write(bStr,'(F16.10)') beta
 write(nuStr,'(F10.2)') nu_obs
@@ -109,7 +108,7 @@ yC = mm * sin(array(2,i))*sin(array(3,i))
 zC = mm * cos(array(2,i))
 
 write(10,*) xC, yC ,zC,nu,&
-            phiTarget, t, g, plot_status
+            phiTarget, t, g, plot_status, Eobs_global
 enddo
 close(10)
 

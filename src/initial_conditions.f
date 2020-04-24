@@ -80,7 +80,7 @@ omega2 = B2 *(f+g) / sig
 !Calculate ray velocity magnitude
 s1 = sig-2.0*r
 Eobs = 2.0_dp*PI*nu_obs*1e9
-Eobs = 1.0_dp
+!Eobs = 1.0_dp
 Eprime = sqrt( (Eobs**2 - omega2 + 2.0_dp*r*omega2/sig) / (s1*(rdot0**2 /del + thetadot0**2) + del*sin(theta)**2*phidot0**2) )
 
 !... and correct velocity components

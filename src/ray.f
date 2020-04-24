@@ -62,9 +62,6 @@ do while (x(1) .GT. Rhor)
 
 
 
-    if (plot .ne.0 ) then
-    print *, 'Final:', x
-    endif
 
     exit
     endif
