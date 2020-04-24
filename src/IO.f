@@ -66,18 +66,18 @@ call calculate_covariant_metric(r,theta,metric)
 
 
 
-print *, '---------'
-print *, 'Check points:'
-print *, r,theta
-print *, metric(1,1), metric(2,2),metric(3,3),metric(4,4),metric(4,1)
-print *, uvector(1), uvector(2), uvector(3),uvector(4)
+!print *, '---------'
+!print *, 'Check points:'
+!print *, r,theta
+!print *, metric(1,1), metric(2,2),metric(3,3),metric(4,4),metric(4,1)
+!print *, uvector(1), uvector(2), uvector(3),uvector(4)
 
 
-print *, 'check:', metric(1,1) * uvector(1)**2 &
-                 + metric(2,2) * uvector(2)**2 &
-                 + metric(3,3) * uvector(3)**2 &
-                 + metric(4,4) * uvector(4)**2 &
-                 +2.0_dp*metric(4,1)*uvector(1)*uvector(4)
+!print *, 'check:', metric(1,1) * uvector(1)**2 &
+ !                + metric(2,2) * uvector(2)**2 &
+ !                + metric(3,3) * uvector(3)**2 &
+ !                + metric(4,4) * uvector(4)**2 &
+ !                +2.0_dp*metric(4,1)*uvector(1)*uvector(4)
 
 
 
@@ -109,7 +109,7 @@ yC = mm * sin(array(2,i))*sin(array(3,i))
 zC = mm * cos(array(2,i))
 
 write(10,*) xC, yC ,zC,nu,&
-            phi, t, g, plot_status
+            phiTarget, t, g, plot_status
 enddo
 close(10)
 

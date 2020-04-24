@@ -80,7 +80,7 @@ dsBest = ds_collection(idx)
 if (dsBest .lt. epsilon(dsBest)) then
 ! Has fallen ino BH likely
 print *, 'Fallen into BH'
-stat = 1 !Exit condition
+stat = 5 !Exit condition
 return
 endif
 

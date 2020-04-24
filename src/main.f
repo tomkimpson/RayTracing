@@ -309,7 +309,8 @@ call run(alpha,beta,nu_obs,ds,0)
 !Then optimise to find the minimum
 do while (ds .GT. ds_eps)
     call pattern_search(alpha,beta,nu_obs,ds,stat)
-    if (stat .eq. 1) then
+    
+    if (stat .ne. 0) then
     exit
     endif
 
@@ -320,10 +321,19 @@ enddo
     if (stat .eq. 0) then
         print *, 'Optimisation converged successfully for primary ray with alpha/beta/ds = ',alpha,beta, ds
         call run(alpha,beta,nu_obs,ds,1)
+    
+
+    elseif (stat .eq. 5) then
+    print *, '------------------------Fell into BH-----------------------------'
+    print *, '------------------------Fell into BH-----------------------------'
+    print *, '------------------------Fell into BH-----------------------------'
+    print *, 'targets =', rTarget, thetaTarget, phiTarget
+    call run(alpha,beta,nu_obs,ds,3)
+
     else
 
         print *, 'Optimisation reached a precision limit for the primary ray with alpha/beta/ds= ',alpha,beta,ds
-        call run(alpha,beta,nu_obs,ds,2)
+        call run(alpha,beta,nu_obs,ds,10)
 
     endif
 
@@ -341,6 +351,7 @@ if (secondary_rays .EQ. 1 .and. xTarget .LT. 0.0_dp) then
     ds = 100.0_dp    
     decay_factor = 2.0_dp
 
+    stat = 0
     call run(alpha,beta,nu_obs,ds,0)
 
 
@@ -348,7 +359,7 @@ if (secondary_rays .EQ. 1 .and. xTarget .LT. 0.0_dp) then
     do while (ds .GT. ds_eps)
     call pattern_search(alpha,beta,nu_obs,ds,stat)
 
-    if (stat .eq. 1) then
+    if (stat .ne. 0) then
     !AHs reached precision limit
     exit
     endif
@@ -358,11 +369,25 @@ if (secondary_rays .EQ. 1 .and. xTarget .LT. 0.0_dp) then
 
     if (stat .eq. 0) then
         print *, 'Optimisation converged successfully for secondary ray with alpha/beta/ds = ',alpha,beta, ds
-        call run(alpha,beta,nu_obs,ds,1)
-    else
-
-        print *, 'Optimisation reached a precision limit for the secondary ray with alpha/beta/ds= ',alpha,beta,ds
         call run(alpha,beta,nu_obs,ds,2)
+ 
+
+
+    elseif (stat .eq. 5) then
+
+    print *, 'Fell into BH'
+    
+    print *, '------------------------Fell into BH-----------------------------'
+    print *, '------------------------Fell into BH-----------------------------'
+    print *, '------------------------Fell into BH-----------------------------'
+    print *, 'targets =', rTarget, thetaTarget, phiTarget
+
+
+    call run(alpha,beta,nu_obs,ds,3)
+
+   else
+        print *, 'Optimisation reached a precision limit for the secondary ray with alpha/beta/ds= ',alpha,beta,ds
+        call run(alpha,beta,nu_obs,ds,20)
 
     endif
 
