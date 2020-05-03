@@ -53,7 +53,7 @@ def Format2D(ax):
     ax.scatter(0,0,c='r')
 
     #axes limits
-    sq = 30
+    sq = 300
     ax.set_xlim(-sq,sq)
     ax.set_ylim(-sq,sq)
 

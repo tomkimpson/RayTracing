@@ -15,13 +15,16 @@ real(kind=dp), dimension(4),intent(in) :: c
 integer(kind=dp), intent(in) :: n
 integer(kind=4) :: plot_status
 real(kind=dp), intent(in) :: alpha,beta,nu_obs
-character(len=200) :: Fname, aStr, bStr, ID, nuStr
+character(len=200) :: Fname, aStr, bStr, ID, nuStr,TimingFile
 integer(kind=dp) :: i
 real(kind=dp) :: xC, yC,zC, mm,Lz
 real(kind=dp) :: r,theta, pr,ptheta,phi,t
 real(kind=dp) :: nu, g
 real(kind=dp),dimension(4) :: pvector,zamo_vector
 real(kind=dp),dimension(4,4) :: metric
+
+
+
 
 !Define savefile
 write(aStr,'(F16.10)') alpha
@@ -108,7 +111,7 @@ yC = mm * sin(array(2,i))*sin(array(3,i))
 zC = mm * cos(array(2,i))
 
 write(10,*) xC, yC ,zC,nu,&
-            phiTarget, t, g, plot_status, Eobs_global
+            phiTarget, t, g, plot_status, Eobs_global, tauTarget,r,theta,phi
 enddo
 close(10)
 

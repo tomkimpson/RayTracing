@@ -194,7 +194,7 @@ integer(kind=dp) :: i
 
 !For reading
 integer(kind=dp) :: IOstatus
-real(kind=dp), dimension(11) :: read_row
+real(kind=dp), dimension(12) :: read_row
 real(kind=dp) :: nu_obs
 
     if (IntegrationType .EQ. 'Forwards') then
@@ -220,7 +220,8 @@ real(kind=dp) :: nu_obs
             read(15,*,IOSTAT=IOstatus) read_row
         
             if (IOstatus .EQ. 0)then
-                rTarget = read_row(9); thetaTarget = read_row(10); phiTarget = read_row(11)
+                rTarget = read_row(9); thetaTarget = read_row(10); phiTarget = read_row(11) 
+                tauTarget = read_row(12)
                 uvector(1:4) = read_row(5:8)
                 print *, 'U in=', uvector
                 print *, ' polar Target = ', rTarget,thetaTarget,phiTarget            
@@ -290,46 +291,34 @@ real(kind=dp),dimension(4) :: globals
 xTarget = sqrt(rTarget**2 + a2) * sin(thetaTarget) * cos(phiTarget)
 yTarget = sqrt(rTarget**2 + a2) * sin(thetaTarget) * sin(phiTarget)
 zTarget = rTarget * cos(thetaTarget)
-print *, 'Cartesian Targets = ', xTarget, yTarget, zTarget
+!print *, 'Cartesian Targets = ', xTarget, yTarget, zTarget
 
 
 
 !Initial guess - primary ray
 
-!This should really be a subroutine
 
+if (ray_order .eq. 1) then
+alpha = yTarget
+elseif (ray_order .eq. 2) then
+alpha = -yTarget
+endif
+beta = zTarget
+
+
+
+!If you are doing chromatic ray tracing, use previosu results 
 if (N0 .ne. 0.0_dp) then
 !If youre not working in vacuum assumes that you are just looking at a single target point
 !Useful as can then use previous info for initial alpha,beta guess
 
 
 if (alpha_previous .ne. 0.0_dp) then
-
 alpha = alpha_previous ; beta = beta_previous
-
-else
-
-if (ray_order .eq. 1) then
-    alpha = yTarget
-elseif (ray_order .eq. 2) then
-    alpha = -yTarget
-endif
 beta = zTarget
-
-
 endif
 
-
-
-
-
 endif
-
-
-
-
-print *, alpha_previous, beta_previous
-print *, alpha,beta
 
 
 
@@ -345,7 +334,7 @@ if (optimizer .eq. 'CGD') then
 globals = 0.0_dp
 global_t = 5.0d-9 
 
-print *, 'Begig optimization for ray order =', ray_order, ' and optimizer= ', optimizer
+print *, 'Begin optimization for ray order =', ray_order, ' and optimizer= ', optimizer
 
 
     do while (ds .GT. ds_eps)
@@ -363,6 +352,10 @@ print *, 'Begig optimization for ray order =', ray_order, ' and optimizer= ', op
 elseif (optimizer .eq. 'PS') then
 dg = 2.0_dp
 decay_factor = 2.0_dp
+
+
+
+print *, 'Begin optimization for ray order =', ray_order, ' and optimizer= ', optimizer
 
     do while (ds .GT. ds_eps)
     call pattern_search(alpha,beta,nu_obs,ds,stat)

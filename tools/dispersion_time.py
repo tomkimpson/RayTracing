@@ -14,7 +14,7 @@ plt.style.use('science')
 
 
 w = 20
-h = 30
+h = 40
 
 
 

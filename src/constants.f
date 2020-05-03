@@ -27,7 +27,7 @@ real(kind=dp), parameter :: a2 = a**2
 
 !Target points for intersection search
 real(kind=dp) :: xTarget, yTarget, zTarget
-real(kind=dp) :: rTarget,thetaTarget, phiTarget
+real(kind=dp) :: rTarget,thetaTarget, phiTarget,tauTarget
 
 !Set the 'x precision' for intersection search
 real(kind=dp) :: dx_eps

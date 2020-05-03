@@ -84,6 +84,7 @@ def plot(f):
 
     if (d == 2):
         ax1.plot(x,y)
+        ax1.scatter(x[-1],y[-1], c='r')
         Format2D(ax1)
 
 
