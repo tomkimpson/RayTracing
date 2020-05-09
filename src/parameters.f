@@ -12,11 +12,11 @@ real(kind=dp), parameter :: PI = 4.D0*ATAN(1.D0)
 
 !BH intrinsic parameters
 real(kind=dp), parameter :: MBH = 4.31d6!BH mass in solar masses
-real(kind=dp), parameter :: a= 0.60_dp !BH spin parameter Now set later
+real(kind=dp), parameter :: a= 0.90_dp !BH spin parameter Now set later
 
 
 !Observer location
-real(kind=dp), parameter :: r_obs = 1.0e4
+real(kind=dp), parameter :: r_obs = 1.0e3
 real(kind=dp), parameter :: theta_obs = PI/2.0_dp
 
 !Plasma density profile normalisation
@@ -27,7 +27,7 @@ real(kind=dp), parameter :: N0 = 0.0e7 !1.0e8
 character(len=20), parameter :: IntegrationType = 'Backwards' !Forwards/Backwards
 
 !Type for integrating multiple trajectories
-character(len=20), parameter :: mode = 'shoot' ! 'frequency', 'image', 'equator', 'single' , 'shoot'
+character(len=20), parameter :: mode = 'equator' ! 'frequency', 'image', 'equator', 'single' , 'shoot'
 
 
 

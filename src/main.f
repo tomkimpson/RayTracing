@@ -51,7 +51,7 @@ implicit none
 real(kind=dp) :: alpha, beta,nu_obs
 real(kind=dp) :: aL, aU, bL ,bU !image plane limits
 integer(kind=dp) :: i,j
-integer(kind=dp),parameter :: N = 100
+integer(kind=dp),parameter :: N = 200
 real(kind=dp) :: ds
 
 
@@ -63,7 +63,7 @@ endif
 
 
 aL = -6.0_dp ; aU = 6.0_dp ;
-nu_obs = 100.0_dp !GHz
+nu_obs = 1.0_dp !GHz !Doesnt matter since for equator we will usually be in vacuum
 beta = 0.0_dp
 
 
